@@ -1,78 +1,47 @@
 <form action="" method="POST" class="form-horizontal" id="cryptapi-payment-form">
-  <fieldset id="payment">
-    <legend>{{ text_legend }}</legend>
-
-    <div class="form-group">
-      <div class="col-sm-12">
-        <ul style="list-style: none outside;">
-            {% if (cryptocurrencies.btc == 1) and (payment_cryptapi_btc_address != '') %}
-            <li>
-                <input type="radio" name="cryptapi_coin" id="cryptapi_coin_btc" value="btc" />
-                <label for="cryptapi_coin_btc">Pay with Bitcoin</label>
-            </li>
-            {% endif %} 
-            {% if (cryptocurrencies.bch == 1) and (payment_cryptapi_bch_address != '') %}
-            <li>
-                <input type="radio" name="cryptapi_coin" id="cryptapi_coin_bch" value="bch" />
-                <label for="cryptapi_coin_bch">Pay with Bitcoin Cash</label>
-            </li>
-            {% endif %} 
-            {% if (cryptocurrencies.ltc == 1) and (payment_cryptapi_ltc_address != '') %}
-            <li>
-                <input type="radio" name="cryptapi_coin" id="cryptapi_coin_ltc" value="ltc" />
-                <label for="cryptapi_coin_ltc">Pay with Litecoin</label>
-            </li>
-            {% endif %} 
-            {% if (cryptocurrencies.eth == 1) and (payment_cryptapi_eth_address != '') %}
-            <li>
-                <input type="radio" name="cryptapi_coin" id="cryptapi_coin_eth" value="eth" />
-                <label for="cryptapi_coin_eth">Pay with Ethereum</label>
-            </li>
-            {% endif %} 
-            {% if (cryptocurrencies.xmr == 1) and (payment_cryptapi_xmr_address != '') %}
-            <li>
-                <input type="radio" name="cryptapi_coin" id="cryptapi_coin_xmr" value="xmr" />
-                <label for="cryptapi_coin_xmr">Pay with Monero</label>
-            </li>
-            {% endif %} 
-            {% if (cryptocurrencies.iota == 1) and (payment_cryptapi_iota_address != '') %}
-            <li>
-                <input type="radio" name="cryptapi_coin" id="cryptapi_coin_iota" value="iota" />
-                <label for="cryptapi_coin_iota">Pay with IOTA</label>
-            </li>
-            {% endif %} 
-        </ul>
-      </div>
-    </div>
-  </fieldset>
+    <fieldset id="payment">
+        <legend>{{ text_legend }}</legend>
+        <div class="form-group">
+            <div class="col-sm-12">
+                <ul style="list-style: none outside;">
+                    {% for ticker, coin in cryptocurrencies %}
+                    <li>
+                        <input type="radio" name="cryptapi_coin" id="cryptapi_coin_{{ ticker }}" value="{{ ticker }}"/>
+                        <label for="cryptapi_coin_{{ ticker }}">Pay with {{ coin }}</label>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </fieldset>
 </form>
 <div class="buttons">
-  <div class="pull-right">
-    <input type="button" value="{{ button_confirm }}" id="button-confirm" data-loading-text="Processing.." class="btn btn-primary"/>
-  </div>
+    <div class="pull-right">
+        <input type="button" value="{{ button_confirm }}" id="button-confirm" data-loading-text="Processing.." class="btn btn-primary"/>
+    </div>
 </div>
-<script type="text/javascript"><!--
-$('#button-confirm').on('click', function() {
-	$.ajax({
-		url: 'index.php?route=extension/payment/cryptapi/confirm',
-                type: 'post',
-		data: $('#cryptapi-payment-form input:checked'),
-		dataType: 'json',
-                cache: false,
-		beforeSend: function() {
-			$('#button-confirm').button('loading');
-		},
-		complete: function() {
-			$('#button-confirm').button('reset');
-		},
-		success: function(json) {
-			if (json['redirect']) {
-				location = json['redirect'];	
-			}
-		},
-		error: function(xhr, ajaxOptions, thrownError) {
-			alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
-		}
-	});
-});
-//--></script>
+<script type="text/javascript">
+    $('#button-confirm').on('click', function () {
+        $.ajax({
+            url: 'index.php?route=extension/payment/cryptapi/confirm',
+            type: 'post',
+            data: $('#cryptapi-payment-form input:checked'),
+            dataType: 'json',
+            cache: false,
+            beforeSend: function () {
+                $('#button-confirm').button('loading');
+            },
+            complete: function () {
+                $('#button-confirm').button('reset');
+            },
+            success: function (json) {
+                if (json['redirect']) {
+                    location = json['redirect'];
+                }
+            },
+            error: function (xhr, ajaxOptions, thrownError) {
+                alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+            }
+        });
+    });
+</script>

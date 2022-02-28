@@ -1,150 +1,168 @@
 {{ header }}{{ column_left }}
 <div id="content">
-  <div class="page-header">
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="pull-right">
+                <button type="submit" form="form-payment" data-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa fa-save"></i></button>
+                <a href="{{ cancel }}" data-toggle="tooltip" title="{{ button_cancel }}" class="btn btn-default"><i class="fa fa-reply"></i></a>
+            </div>
+            <h1>{{ heading_title }}</h1>
+            <ul class="breadcrumb">
+                {% for breadcrumb in breadcrumbs %}
+                    <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
     <div class="container-fluid">
-      <div class="pull-right">
-        <button type="submit" form="form-payment" data-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa fa-save"></i></button>
-        <a href="{{ cancel }}" data-toggle="tooltip" title="{{ button_cancel }}" class="btn btn-default"><i class="fa fa-reply"></i></a>
-      </div>
-      <h1>{{ heading_title }}</h1>
-      <ul class="breadcrumb">
-        {% for breadcrumb in breadcrumbs %}
-          <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
-        {% endfor %}
-      </ul>
+        {% if error_warning %}
+            <div class="alert alert-danger alert-dismissible"><i class="fa fa-exclamation-circle"></i> {{ error_warning }}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        {% endif %}
+        <div class="alert alert-info" style="overflow: hidden;">
+            <div class="row">
+                {{ text_cryptapi_image }}<br/>
+                <span style="margin-left:12px; line-height: 25px">{{ text_connect_cryptapi }}</span><br/>
+                <span style="margin-left:12px; line-height: 25px">{{ text_cryptapi_suppport }}</span>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="fa fa-pencil"></i> {{ text_edit }}</h3>
+            </div>
+            <div class="panel-body">
+                <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-payment" class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_status" id="input-status" class="form-control">
+                                {% if payment_cryptapi_status %}
+                                    <option value="1" selected="selected">{{ text_enabled }}</option>
+                                    <option value="0">{{ text_disabled }}</option>
+                                {% else %}
+                                    <option value="1">{{ text_enabled }}</option>
+                                    <option value="0" selected="selected">{{ text_disabled }}</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-12 text-center" style="margin-bottom: 20px">
+                            <label class="control-label text-center" style="float: none !important;">
+                            <span data-toggle="tooltip" title="{{ help_cryptocurrencies }}">
+                                {{ entry_cryptocurrencies }}
+                            </span>
+                            </label>
+                        </div>
+                        <input type="hidden" id="cryptapi_cryptocurrencies_array_cache" name="payment_cryptapi_cryptocurrencies_array_cache" value='{{ payment_cryptapi_cryptocurrencies_array|json_encode() }}'>
+                        {% for ticker, coin in payment_cryptapi_cryptocurrencies_array %}
+                            <div class="col-sm-2 text-right">
+                                <input type='checkbox' name='payment_cryptapi_cryptocurrencies[{{ ticker }}]' id="cryptapi_cryptocurrencies_{{ ticker }}"
+                                       value='{{ ticker }}' {{payment_cryptapi_cryptocurrencies[ticker]  is defined and payment_cryptapi_cryptocurrencies[ticker]  == ticker ? 'checked="checked"' : '' }} />
+                                <label class="control-label" for="cryptapi_cryptocurrencies_{{ ticker }}">
+                                    <span data-toggle="tooltip" title="{{ help_cryptocurrency }} {{ coin }}">
+                                        {{ coin }}
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-sm-10">
+                                <p>
+                                    <input class="form-control" type="text" id="cryptapi_cryptocurrencies_address_{{ ticker }}" name='payment_cryptapi_cryptocurrencies_address_{{ ticker }}'
+                                           placeholder="{{ coin }}" value="{{ attribute(_context, 'payment_cryptapi_cryptocurrencies_address_' ~ ticker) }}">
+                                </p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_branding">{{ branding }}</label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_branding" id="cryptapi_branding" class="form-control">
+                                {% if payment_cryptapi_branding is empty %}
+                                    <option value="1" selected="selected">{{ text_enabled }}</option>
+                                    <option value="0">{{ text_disabled }}</option>
+                                {% elseif payment_cryptapi_branding == 1 %}
+                                    <option value="1" selected="selected">{{ text_enabled }}</option>
+                                    <option value="0">{{ text_disabled }}</option>
+                                {% elseif payment_cryptapi_branding == 0 %}
+                                    <option value="1">{{ text_enabled }}</option>
+                                    <option value="0" selected="selected">{{ text_disabled }}</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_qrcode">{{ qrcode }}</label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_qrcode" id="cryptapi_qrcode" class="form-control">
+                                {% if payment_cryptapi_branding is empty %}
+                                    <option value="1" selected="selected">{{ text_enabled }}</option>
+                                    <option value="0">{{ text_disabled }}</option>
+                                {% elseif payment_cryptapi_branding == 1 %}
+                                    <option value="1" selected="selected">{{ text_enabled }}</option>
+                                    <option value="0">{{ text_disabled }}</option>
+                                {% elseif payment_cryptapi_branding == 0 %}
+                                    <option value="1">{{ text_enabled }}</option>
+                                    <option value="0" selected="selected">{{ text_disabled }}</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_qrcode_size">{{ qrcode_size }}</label>
+                        <div class="col-sm-10">
+                            <input class="form-control" type="text" id="cryptapi_qrcode_size" name='payment_cryptapi_qrcode_size'
+                                   {% if payment_cryptapi_qrcode_size is empty %}value="300" {% else %}value="{{ payment_cryptapi_qrcode_size }}"{% endif %}>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="input-geo-zone">{{ entry_geo_zone }}</label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_standard_geo_zone_id" id="input-geo-zone" class="form-control">
+                                <option value="0">{{ text_all_zones }}</option>
+                                {% for geo_zone in geo_zones %}
+                                    {% if geo_zone.geo_zone_id == payment_cryptapi_standard_geo_zone_id %}
+                                        <option value="{{ geo_zone.geo_zone_id }}" selected="selected">{{ geo_zone.name }}</option>
+                                    {% else %}
+                                        <option value="{{ geo_zone.geo_zone_id }}">{{ geo_zone.name }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="input-order-status">{{ entry_order_status }}</label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_order_status_id" id="input-order-status" class="form-control">
+                                {% for order_status in order_statuses %}
+                                    {% if order_status.order_status_id == payment_cryptapi_order_status_id %}
+                                        <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                                    {% else %}
+                                        <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="input-sort-order">{{ entry_sort_order }}</label>
+                        <div class="col-sm-10">
+                            <input type="text" name="payment_cryptapi_sort_order" value="{{ payment_cryptapi_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order"
+                                   class="form-control"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="input-status">{{ disable_conversion }}</label>
+                        <div class="col-sm-10">
+                            <input type='checkbox' name='payment_cryptapi_disable_conversion' id="cryptapi_disable_conversion"
+                                   value='1' {{ payment_cryptapi_disable_conversion is defined and payment_cryptapi_disable_conversion == 1 ? 'checked="checked"' : '' }} />
+                            <p><strong>{{ disable_conversion_warn_bold }}</strong>
+                                {{ disable_conversion_warn }}</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="container-fluid">
-    {% if error_warning %}
-      <div class="alert alert-danger alert-dismissible"><i class="fa fa-exclamation-circle"></i> {{ error_warning }}
-        <button type="button" class="close" data-dismiss="alert">&times;</button>
-      </div>
-    {% endif %}
-    <div class="alert alert-info" style="overflow: hidden;">
-      <div class="row">
-        {{ text_cryptapi_image }}<br/>
-        <span style="margin-left:12px; line-height: 25px">{{ text_connect_cryptapi }}</span><br/>
-        <span style="margin-left:12px; line-height: 25px">{{ text_cryptapi_suppport }}</span>
-      </div>
-    </div>
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h3 class="panel-title"><i class="fa fa-pencil"></i> {{ text_edit }}</h3>
-      </div>
-      <div class="panel-body">
-        <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-payment" class="form-horizontal">
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="cryptapi_cryptocurrencies"><span data-toggle="tooltip" title="{{ help_cryptocurrencies }}">{{ entry_cryptocurrencies }}</span></label>
-            <div class="col-sm-10">
-              <p>
-                <input type="hidden" name="payment_cryptapi_cryptocurrencies[btc]" value="0"/> <input type='checkbox' name='payment_cryptapi_cryptocurrencies[btc]' id="cryptapi_cryptocurrencies" value='1' {{ payment_cryptapi_cryptocurrencies.btc is defined and payment_cryptapi_cryptocurrencies.btc == 1 ? 'checked="checked"' : '' }} /> {{ text_btc }}
-              </p>
-              <p>
-                <input type="hidden" name="payment_cryptapi_cryptocurrencies[bch]" value="0"/> <input type='checkbox' name='payment_cryptapi_cryptocurrencies[bch]' value='1' {{ payment_cryptapi_cryptocurrencies.bch is defined and payment_cryptapi_cryptocurrencies.bch == 1 ? 'checked="checked"' : '' }} /> {{ text_bch }}
-              </p>
-              <p>
-                <input type="hidden" name="payment_cryptapi_cryptocurrencies[ltc]" value="0"/> <input type='checkbox' name='payment_cryptapi_cryptocurrencies[ltc]' value='1' {{ payment_cryptapi_cryptocurrencies.ltc is defined and payment_cryptapi_cryptocurrencies.ltc == 1 ? 'checked="checked"' : '' }} /> {{ text_ltc }}
-              </p>
-              <p>
-                <input type="hidden" name="payment_cryptapi_cryptocurrencies[eth]" value="0"/> <input type='checkbox' name='payment_cryptapi_cryptocurrencies[eth]' value='1' {{ payment_cryptapi_cryptocurrencies.eth is defined and payment_cryptapi_cryptocurrencies.eth == 1 ? 'checked="checked"' : '' }} /> {{ text_eth }}
-              </p>
-              <p>
-                <input type="hidden" name="payment_cryptapi_cryptocurrencies[xmr]" value="0"/> <input type='checkbox' name='payment_cryptapi_cryptocurrencies[xmr]' value='1' {{ payment_cryptapi_cryptocurrencies.xmr is defined and payment_cryptapi_cryptocurrencies.xmr == 1 ? 'checked="checked"' : '' }} /> {{ text_xmr }}
-              </p>
-              <p>
-                <input type="hidden" name="payment_cryptapi_cryptocurrencies[iota]" value="0"/> <input type='checkbox' name='payment_cryptapi_cryptocurrencies[iota]' value='1' {{ payment_cryptapi_cryptocurrencies.iota is defined and payment_cryptapi_cryptocurrencies.iota == 1 ? 'checked="checked"' : '' }} /> {{ text_iota }}
-              </p>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-btc_address"><span data-toggle="tooltip" title="{{ help_btc_address }}">{{ entry_btc_address }}</span></label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_cryptapi_btc_address" value="{{ payment_cryptapi_btc_address }}" id="input-btc_address" class="form-control"/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-bch_address"><span data-toggle="tooltip" title="{{ help_bch_address }}">{{ entry_bch_address }}</span></label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_cryptapi_bch_address" value="{{ payment_cryptapi_bch_address }}" id="input-bch_address" class="form-control"/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-ltc_address"><span data-toggle="tooltip" title="{{ help_ltc_address }}">{{ entry_ltc_address }}</span></label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_cryptapi_ltc_address" value="{{ payment_cryptapi_ltc_address }}" id="input-ltc_address" class="form-control"/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-eth_address"><span data-toggle="tooltip" title="{{ help_eth_address }}">{{ entry_eth_address }}</span></label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_cryptapi_eth_address" value="{{ payment_cryptapi_eth_address }}" id="input-eth_address" class="form-control"/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-xmr_address"><span data-toggle="tooltip" title="{{ help_xmr_address }}">{{ entry_xmr_address }}</span></label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_cryptapi_xmr_address" value="{{ payment_cryptapi_xmr_address }}" id="input-xmr_address" class="form-control"/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-iota_address"><span data-toggle="tooltip" title="{{ help_iota_address }}">{{ entry_iota_address }}</span></label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_cryptapi_iota_address" value="{{ payment_cryptapi_iota_address }}" id="input-iota_address" class="form-control"/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label>
-            <div class="col-sm-10">
-              <select name="payment_cryptapi_status" id="input-status" class="form-control">
-                {% if payment_cryptapi_status %}
-                  <option value="1" selected="selected">{{ text_enabled }}</option>
-                  <option value="0">{{ text_disabled }}</option>
-                {% else %}
-                  <option value="1">{{ text_enabled }}</option>
-                  <option value="0" selected="selected">{{ text_disabled }}</option>
-                {% endif %}
-              </select>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-geo-zone">{{ entry_geo_zone }}</label>
-            <div class="col-sm-10">
-              <select name="payment_cryptapi_standard_geo_zone_id" id="input-geo-zone" class="form-control">
-                <option value="0">{{ text_all_zones }}</option>
-                {% for geo_zone in geo_zones %}
-                  {% if geo_zone.geo_zone_id == payment_cryptapi_standard_geo_zone_id %}
-                    <option value="{{ geo_zone.geo_zone_id }}" selected="selected">{{ geo_zone.name }}</option>
-                  {% else %}
-                    <option value="{{ geo_zone.geo_zone_id }}">{{ geo_zone.name }}</option>
-                  {% endif %}
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-order-status">{{ entry_order_status }}</label>
-            <div class="col-sm-10">
-              <select name="payment_cryptapi_order_status_id" id="input-order-status" class="form-control">
-                {% for order_status in order_statuses %}
-                  {% if order_status.order_status_id == payment_cryptapi_order_status_id %}
-                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
-                  {% else %}
-                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
-                  {% endif %}
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-sort-order">{{ entry_sort_order }}</label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_cryptapi_sort_order" value="{{ payment_cryptapi_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order" class="form-control"/>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
 </div>
 {{ footer }}
