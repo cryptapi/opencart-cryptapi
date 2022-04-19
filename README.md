@@ -141,5 +141,5 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * Minor fixes
 * UI Improvements
 
-== Upgrade Notice ==
+#### Upgrade Notice
 * No breaking changes
