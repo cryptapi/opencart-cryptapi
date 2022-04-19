@@ -76,18 +76,15 @@ class ModelExtensionPaymentCryptapi extends Model
         return implode('', $nonce);
     }
 
-    public function roundSig($number, $sigdigs = 5)
+    public function getOrders()
     {
-        $multiplier = 1;
-        while ($number < 0.1) {
-            $number *= 10;
-            $multiplier /= 10;
+        $qry = $this->db->query("SELECT * FROM `" . DB_PREFIX . "order` INNER JOIN `" . DB_PREFIX . "order_history` WHERE `" . DB_PREFIX . "order`.order_id=`" . DB_PREFIX . "order_history`.order_id AND `" . DB_PREFIX . "order`.payment_code ='cryptapi' AND `" . DB_PREFIX . "order`.order_status_id=1");
+
+        if ($qry->num_rows) {
+            return $orders = $qry->rows;
+        } else {
+            return false;
         }
-        while ($number >= 1) {
-            $number /= 10;
-            $multiplier *= 10;
-        }
-        return round($number, $sigdigs) * $multiplier;
     }
 
     public function getPaymentData($order_id)

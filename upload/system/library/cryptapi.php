@@ -178,22 +178,100 @@ class CryptAPIHelper
         return $params;
     }
 
-    public static function get_conversion($coin, $total, $currency, $disable_conversion)
+    public static function get_static_qrcode($address, $coin, $value, $size = 300)
+    {
+        if (empty($address)) {
+            return null;
+        }
+
+        if (!empty($value)) {
+            $params = [
+                'address' => $address,
+                'value' => $value,
+                'size' => $size,
+            ];
+        } else {
+            $params = [
+                'address' => $address,
+                'size' => $size,
+            ];
+        }
+
+        $response = CryptAPIHelper::_request($coin, 'qrcode', $params);
+
+        if ($response->status == 'success') {
+            return ['qr_code' => $response->qr_code, 'uri' => $response->payment_uri];
+        }
+
+        return null;
+    }
+
+    public static function get_conversion($from, $to, $value, $disable_conversion)
     {
 
         if ($disable_conversion) {
-            return $total;
+            return $value;
         }
 
         $params = [
-            'value' => $total,
-            'from' => $currency,
+            'from' => $from,
+            'to' => $to,
+            'value' => $value,
         ];
 
-        $response = CryptAPIHelper::_request($coin, 'convert', $params);
+        $response = CryptAPIHelper::_request('', 'convert', $params);
 
         if ($response->status == 'success') {
             return $response->value_coin;
+        }
+
+        return null;
+    }
+
+    public static function calc_order($history, $total, $total_fiat)
+    {
+        $already_paid = 0;
+        $already_paid_fiat = 0;
+        $remaining = $total;
+        $remaining_pending = $total;
+        $remaining_fiat = $total_fiat;
+
+        if (!empty($history)) {
+            foreach ($history as $uuid => $item) {
+                if ((int)$item['pending'] === 0) {
+                    $remaining = bcsub($remaining, $item['value_paid'], 18);
+                }
+
+                $remaining_pending = bcsub($remaining_pending, $item['value_paid'], 18);
+                $remaining_fiat = bcsub($remaining_fiat, $item['value_paid_fiat'], 18);
+
+                $already_paid = bcadd($already_paid, $item['value_paid'], 18);
+                $already_paid_fiat = bcadd($already_paid_fiat, $item['value_paid_fiat'], 18);
+            }
+        }
+
+        return [
+            'already_paid' => floatval($already_paid),
+            'already_paid_fiat' => floatval($already_paid_fiat),
+            'remaining' => floatval($remaining),
+            'remaining_pending' => floatval($remaining_pending),
+            'remaining_fiat' => floatval($remaining_fiat)
+        ];
+    }
+
+    public static function get_estimate($coin)
+    {
+
+        $params = [
+            'addresses' => 1,
+            'priority' => 'default',
+        ];
+
+        $response = CryptAPIHelper::_request($coin, 'estimate', $params);
+
+        if ($response->status == 'success') {
+
+            return $response->estimated_cost_currency;
         }
 
         return null;

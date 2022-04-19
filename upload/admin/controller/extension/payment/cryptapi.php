@@ -107,6 +107,12 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $data['payment_cryptapi_disable_conversion'] = $this->config->get('payment_cryptapi_disable_conversion');
         }
 
+        if (isset($this->request->post['payment_cryptapi_title'])) {
+            $data['payment_cryptapi_title'] = $this->request->post['payment_cryptapi_title'];
+        } else {
+            $data['payment_cryptapi_title'] = $this->config->get('payment_cryptapi_title');
+        }
+
         if (isset($this->request->post['payment_cryptapi_standard_geo_zone_id'])) {
             $data['payment_cryptapi_standard_geo_zone_id'] = $this->request->post['payment_cryptapi_standard_geo_zone_id'];
         } else {
@@ -126,6 +132,36 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $data['payment_cryptapi_status'] = $this->request->post['payment_cryptapi_status'];
         } else {
             $data['payment_cryptapi_status'] = $this->config->get('payment_cryptapi_status');
+        }
+
+        if (isset($this->request->post['payment_cryptapi_blockchain_fees'])) {
+            $data['payment_cryptapi_blockchain_fees'] = $this->request->post['payment_cryptapi_blockchain_fees'];
+        } else {
+            $data['payment_cryptapi_blockchain_fees'] = $this->config->get('payment_cryptapi_blockchain_fees');
+        }
+
+        if (isset($this->request->post['payment_cryptapi_fees'])) {
+            $data['payment_cryptapi_fees'] = $this->request->post['payment_cryptapi_fees'];
+        } else {
+            $data['payment_cryptapi_fees'] = $this->config->get('payment_cryptapi_fees');
+        }
+
+        if (isset($this->request->post['payment_cryptapi_color_scheme'])) {
+            $data['payment_cryptapi_color_scheme'] = $this->request->post['payment_cryptapi_color_scheme'];
+        } else {
+            $data['payment_cryptapi_color_scheme'] = $this->config->get('payment_cryptapi_color_scheme');
+        }
+
+        if (isset($this->request->post['payment_cryptapi_refresh_values'])) {
+            $data['payment_cryptapi_refresh_values'] = $this->request->post['payment_cryptapi_refresh_values'];
+        } else {
+            $data['payment_cryptapi_refresh_values'] = $this->config->get('payment_cryptapi_refresh_values');
+        }
+
+        if (isset($this->request->post['payment_cryptapi_order_cancelation_timeout'])) {
+            $data['payment_cryptapi_order_cancelation_timeout'] = $this->request->post['payment_cryptapi_order_cancelation_timeout'];
+        } else {
+            $data['payment_cryptapi_order_cancelation_timeout'] = $this->config->get('payment_cryptapi_order_cancelation_timeout');
         }
 
         if (isset($this->request->post['payment_cryptapi_branding'])) {

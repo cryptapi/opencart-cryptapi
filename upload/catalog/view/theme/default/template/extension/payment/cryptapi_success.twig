@@ -3,38 +3,94 @@
     let ajax_url = '{{ ajax_url }}';
     check_status(ajax_url);
 </script>
-<div class="ca_payment-panel">
+<div class="ca_payment-panel
+{% if color_scheme == 'auto' %}
+ auto
+{% elseif color_scheme == 'light' %}
+ light
+{% else %}
+ dark
+{% endif %}">
     <div class="ca_payment_details">
         <div class="ca_payments_wrapper">
-            <div class="ca_qrcode_wrapper" style="{% if qr_code_hidden %}display: block;{% else %}display: none;{% endif %} width: {{ qr_code_size + 20 }}px;">
-                <div class="inner-wrapper">
-                    <figure>
-                        <img class="ca_qrcode no_value" src="data:image/png;base64,{{ qr_code }}" alt="{{ qrcode_alt_text }}"/>
-                        <img class="ca_qrcode value" style="display: none" src="data:image/png;base64,{{ qr_code_value }}"
-                             alt="{{ qrcode_alt_value_text }}">
-                    </figure>
-                    <div class=" ca_qrcode_buttons">
-                        <button class="ca_qrcode_btn no_value active" aria-label="{{ qrcode_alt_show_text }}">
-                            {{ qrcode_button_noamount_text }}
-                        </button>
-                        <button class="ca_qrcode_btn value" aria-label="{{ qrcode_alt_show_value }}">
-                            {{ qrcode_button_amount_text }}
-                        </button>
+            <div class="ca_qrcode_wrapper"
+                 style="{% if qr_code_setting == 'hide_ammount' or qr_code_setting =='hide_without_ammount' %}display: none;{% endif %}; width: {{ qr_code_size + 20 }}px;">
+                {% if crypto_allowed_value == true %}
+                    <div class="inner-wrapper">
+                        <figure>
+                            {% if qr_code_setting != 'hide_ammount' %}
+                                <img class="ca_qrcode no_value"
+                                        {% if qr_code_setting == 'ammount' %}
+                                            style="display:none;"
+                                        {% endif %}
+                                     src="data:image/png;base64,{{ qr_code }}" alt="{{ qrcode_alt_text }}"/>
+                            {% endif %}
+                            {% if qr_code_setting != 'hide_without_ammount' %}
+                                <img class="ca_qrcode value"
+                                        {% if qr_code_setting == 'without_ammount' %}
+                                            style="display:none;"
+                                        {% endif %} src="data:image/png;base64,{{ qr_code_value }}"
+                                     alt="{{ qrcode_alt_value_text }}"/>
+                            {% endif %}
+                        </figure>
+                        {% if qr_code_setting != 'hide_ammount' and  qr_code_setting != 'hide_without_ammount' %}
+                            <div class="ca_qrcode_buttons">
+                                {% if qr_code_setting != 'hide_without_ammount' %}
+                                    <button class="ca_qrcode_btn no_value
+                        {% if qr_code_setting == 'without_ammount' %}
+                         active
+                         {% endif %}" aria-label="{{ qrcode_alt_show_value }}">
+                                        {{ qrcode_button_noamount_text }}
+                                    </button>
+                                {% endif %}
+                                {% if qr_code_setting != 'hide_ammount' %}
+                                    <button class="ca_qrcode_btn value
+                        {% if qr_code_setting == 'ammount' %}
+                         active
+                         {% endif %}" aria-label="{{ qrcode_alt_show_value }}">
+                                        {{ qrcode_button_amount_text }}
+                                    </button>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
-                </div>
+                {% else %}
+                    <div class="inner-wrapper">
+                        <figure>
+                            <img class="ca_qrcode no_value" src="data:image/png;base64,{{ qr_code }}"
+                                 alt="{{ qrcode_alt_text }}"/>
+                        </figure>
+                        <div class="ca_qrcode_buttons">
+                            <button class="ca_qrcode_btn no_value active" aria-label="{{ qrcode_alt_show_value }}">
+                                {{ qrcode_button_noamount_text }}
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
-            <script>console.log({{ _context | json_encode | raw }});</script>
             <div class="ca_details_box">
                 <div class="ca_details_text">
                     {{ please_send_text }}
                     <button class="ca_copy ca_details_copy" data-tocopy="{{ crypto_value }}">
                         <span><b class="ca_value">{{ crypto_value }}</b></span>
-                        <span><b>{{ crypto_coin }}</b></span>
+                        <span><b>{{ crypto_coin|upper }}</b></span>
                         <span class="ca_tooltip ca_copy_icon_tooltip tip">{{ text_copy }}</span>
                         <span class="ca_tooltip ca_copy_icon_tooltip success" style="display: none">{{ text_copied }}</span>
                     </button>
-                    ({{ currency_symbol }} {{ total }})
+                    ({{ currency_symbol_left }}{{ total }}{{ currency_symbol_right }})
                 </div>
+                <div class="ca_payment_notification ca_notification_payment_received" style="display: none;">
+                    {{ payment_notification|format('<strong><span class="ca_notification_ammount"></span></strong>') }}
+                </div>
+                <div class="ca_payment_notification ca_notification_remaining" style="display: none">
+                    <strong>{{ text_notice }}</strong>: {{ notification_remaining|format(min_tx_notice) }}
+                </div>
+                {% if refresh_value_interval != 'none' %}
+                    <div class="ca_time_refresh">
+                        {{ order_value_refresh|format(crypto_coin|upper) }}
+                        <span class="ca_time_seconds_count" data-soon="{{ text_moment }}" data-seconds="{{ conversion_timer }}">{{ conversion_timer|date('i:s') }}</span>
+                    </div>
+                {% endif %}
                 <div class="ca_details_input">
                     <span>{{ address_in }}</span>
                     <button class="ca_copy ca_copy_icon" data-tocopy="{{ address_in }}">
@@ -44,21 +100,39 @@
                     <div class="ca_loader"></div>
                 </div>
             </div>
+            {% if order_cancelation_timeout != 'none' %}
+                <span class="ca_notification_cancel" data-text="{{ order_cancelled_minute }}">
+                {{ order_valid_time|format(cancel_timer, cancel_timer|date('H:i')) }}
+                </span>
+            {% endif %}
             <div class="ca_buttons_container">
-                <a href="{{ payment_uri }}" target="_blank">
-                    {{ wallet_text }}
-                </a>
                 <a class="ca_show_qr" href="#" aria-label="{{ qrcode_show }}">
-                    {{ qr_code_text }}
+                                <span class="ca_show_qr_open
+                                {% if qr_code_setting == 'hide_ammount' or qr_code_setting =='hide_without_ammount' %}
+                                    active
+                                {% endif %}">{{ qr_code_text_open }}
+                                </span>
+                    <span class="ca_show_qr_close
+                    {% if qr_code_setting != 'hide_ammount' or qr_code_setting !='hide_without_ammount' %}
+                    active
+                    {% endif %}">{{ qr_code_text_close }}</span>
                 </a>
             </div>
-            {% if branding %}
+            {% if show_branding %}
                 <div class="ca_branding">
                     <a href="https://cryptapi.io/" target="_blank">
-                        {{ branding_text }}
+                        <span>Powered by</span>
+                        {{ branding_logo }}
                     </a>
                 </div>
             {% endif %}
+        </div>
+        <div class="ca_payment_processing" style="display: none;">
+            <div class="ca_payment_processing_icon">
+                <div class="ca_loader_payment_processing"></div>
+            </div>
+            <h2>{{ payment_being_processed }}</h2>
+            <h5>{{ processing_blockchain }}</h5>
         </div>
         <div class="ca_payment_confirmed" style="display: none;">
             <div class="ca_payment_confirmed_icon">
@@ -69,8 +143,27 @@
             </div>
             <h2>{{ payment_confirmed_text }}</h2>
         </div>
+        <div class="ca_payment_cancelled" style="display: none;">
+            <div class="ca_payment_cancelled_icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                    <path fill="#c62828"
+                          d="M504 256c0 136.997-111.043 248-248 248S8 392.997 8 256C8 119.083 119.043 8 256 8s248 111.083 248 248zm-248 50c-25.405 0-46 20.595-46 46s20.595 46 46 46 46-20.595 46-46-20.595-46-46-46zm-43.673-165.346l7.418 136c.347 6.364 5.609 11.346 11.982 11.346h48.546c6.373 0 11.635-4.982 11.982-11.346l7.418-136c.375-6.874-5.098-12.654-11.982-12.654h-63.383c-6.884 0-12.356 5.78-11.981 12.654z"></path>
+                </svg>
+            </div>
+            <h2>{{ payment_order_cancelled }}</h2>
+        </div>
+        <div class="ca_history" style="display: none;">
+            <table class="ca_history_fill">
+                <tr class="ca_history_header">
+                    <th><strong>{{ table_time }}</strong></th>
+                    <th><strong>{{ table_value_paid }}</strong></th>
+                    <th><strong>{{ table_fiat_value }}</strong></th>
+                </tr>
+            </table>
+        </div>
+
         <div class="ca_progress">
-            <div class="ca_progress_icon waiting_payment">
+            <div class="ca_progress_icon waiting_payment done">
                 <svg width="60" height="60" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M49.2188 25C49.2188 38.3789 38.3789 49.2188 25 49.2188C11.6211 49.2188 0.78125 38.3789 0.78125 25C0.78125 11.6211 11.6211 0.78125 25 0.78125C38.3789 0.78125 49.2188 11.6211 49.2188 25ZM35.1953 22.1777L28.125 29.5508V11.7188C28.125 10.4199 27.0801 9.375 25.7812 9.375H24.2188C22.9199 9.375 21.875 10.4199 21.875 11.7188V29.5508L14.8047 22.1777C13.8965 21.2305 12.3828 21.2109 11.4551 22.1387L10.3906 23.2129C9.47266 24.1309 9.47266 25.6152 10.3906 26.5234L23.3398 39.4824C24.2578 40.4004 25.7422 40.4004 26.6504 39.4824L39.6094 26.5234C40.5273 25.6055 40.5273 24.1211 39.6094 23.2129L38.5449 22.1387C37.6172 21.2109 36.1035 21.2305 35.1953 22.1777V22.1777Z"
                           fill="#0B4B70"/>

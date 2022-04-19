@@ -92,6 +92,10 @@ For more info on our fees [click here](https://cryptapi.io/get_started/#fees)
 8. Save Changes
 9. All done! 
 
+### Cronjob
+
+Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL ``YOUR-DOMAIN/index.php?route=extension/payment/cryptapi/cron``.
+
 ### Frequently Asked Questions
 
 #### Do I need an API key?
@@ -118,13 +122,24 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 
 ### Changelog 
 
-= 1.0 =
+#### 1.0
 * Initial release.
 
-= 2.0 =
+####  2.0
 * New coins
 * Updated codebase
 * New API URL
+
+#### 3.0 
+* New settings and color schemes to fit dark mode
+* New settings to add CryptAPI's services fees to the checkout
+* New settings to add blockchain fees to the checkout
+* Upgrade the settings
+* Added a history of transactions to the order payment page
+* Better handling of partial payments
+* Disable QR Code with value in certain currencies due to some wallets not supporting it
+* Minor fixes
+* UI Improvements
 
 == Upgrade Notice ==
 * No breaking changes

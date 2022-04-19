@@ -48,31 +48,11 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-12 text-center" style="margin-bottom: 20px">
-                            <label class="control-label text-center" style="float: none !important;">
-                            <span data-toggle="tooltip" title="{{ help_cryptocurrencies }}">
-                                {{ entry_cryptocurrencies }}
-                            </span>
-                            </label>
+                        <label class="col-sm-2 control-label" for="cryptapi_cryptapi_title">{{ title }}</label>
+                        <div class="col-sm-10">
+                            <input class="form-control" type="text" id="cryptapi_cryptapi_title" name='payment_cryptapi_title'
+                                   {% if payment_cryptapi_title is empty %}value="Cryptocurrency" {% else %}value="{{ payment_cryptapi_title }}"{% endif %}>
                         </div>
-                        <input type="hidden" id="cryptapi_cryptocurrencies_array_cache" name="payment_cryptapi_cryptocurrencies_array_cache" value='{{ payment_cryptapi_cryptocurrencies_array|json_encode() }}'>
-                        {% for ticker, coin in payment_cryptapi_cryptocurrencies_array %}
-                            <div class="col-sm-2 text-right">
-                                <input type='checkbox' name='payment_cryptapi_cryptocurrencies[{{ ticker }}]' id="cryptapi_cryptocurrencies_{{ ticker }}"
-                                       value='{{ ticker }}' {{payment_cryptapi_cryptocurrencies[ticker]  is defined and payment_cryptapi_cryptocurrencies[ticker]  == ticker ? 'checked="checked"' : '' }} />
-                                <label class="control-label" for="cryptapi_cryptocurrencies_{{ ticker }}">
-                                    <span data-toggle="tooltip" title="{{ help_cryptocurrency }} {{ coin }}">
-                                        {{ coin }}
-                                    </span>
-                                </label>
-                            </div>
-                            <div class="col-sm-10">
-                                <p>
-                                    <input class="form-control" type="text" id="cryptapi_cryptocurrencies_address_{{ ticker }}" name='payment_cryptapi_cryptocurrencies_address_{{ ticker }}'
-                                           placeholder="{{ coin }}" value="{{ attribute(_context, 'payment_cryptapi_cryptocurrencies_address_' ~ ticker) }}">
-                                </p>
-                            </div>
-                        {% endfor %}
                     </div>
                     <div class="form-group">
                         <label class="col-sm-2 control-label" for="cryptapi_branding">{{ branding }}</label>
@@ -92,19 +72,211 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-2 control-label" for="cryptapi_qrcode">{{ qrcode }}</label>
+                        <label class="col-sm-2 control-label" for="cryptapi_blockchain_fees">
+                            <span data-toggle="tooltip" title="{{ text_blockchain_fees }}">
+                               {{ blockchain_fees }}
+                            </span>
+                        </label>
                         <div class="col-sm-10">
-                            <select name="payment_cryptapi_qrcode" id="cryptapi_qrcode" class="form-control">
-                                {% if payment_cryptapi_branding is empty %}
+                            <select name="payment_cryptapi_blockchain_fees" id="cryptapi_blockchain_fees" class="form-control">
+                                {% if payment_cryptapi_blockchain_fees == 1 %}
                                     <option value="1" selected="selected">{{ text_enabled }}</option>
                                     <option value="0">{{ text_disabled }}</option>
-                                {% elseif payment_cryptapi_branding == 1 %}
-                                    <option value="1" selected="selected">{{ text_enabled }}</option>
-                                    <option value="0">{{ text_disabled }}</option>
-                                {% elseif payment_cryptapi_branding == 0 %}
+                                {% else %}
                                     <option value="1">{{ text_enabled }}</option>
                                     <option value="0" selected="selected">{{ text_disabled }}</option>
                                 {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="payment_cryptapi_fees">
+                            <span data-toggle="tooltip" title="{{ text_fees }}">
+                               {{ fees }}
+                            </span>
+                        </label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_fees" id="payment_cryptapi_fees" class="form-control">
+                                <option value="0.05"
+                                        {% if payment_cryptapi_fees == "0.05" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >5%
+                                </option>
+                                <option value="0.048"
+                                        {% if payment_cryptapi_fees == "0.048" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >4.8%
+                                </option>
+                                <option value="0.045"
+                                        {% if payment_cryptapi_fees == "0.045" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >4.5%
+                                </option>
+                                <option value="0.042"
+                                        {% if payment_cryptapi_fees == "0.042" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >4.2%
+                                </option>
+                                <option value="0.04"
+                                        {% if payment_cryptapi_fees == "0.04" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >4%
+                                </option>
+                                <option value="0.038"
+                                        {% if payment_cryptapi_fees == "0.038" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >3.8%
+                                </option>
+                                <option value="0.035"
+                                        {% if payment_cryptapi_fees == "0.035" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >3.5%
+                                </option>
+                                <option value="0.032"
+                                        {% if payment_cryptapi_fees == "0.032" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >3.2%
+                                </option>
+                                <option value="0.03"
+                                        {% if payment_cryptapi_fees == "0.03" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >3%
+                                </option>
+                                <option value="0.028"
+                                        {% if payment_cryptapi_fees == "0.028" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >2.8%
+                                </option>
+                                <option value="0.025"
+                                        {% if payment_cryptapi_fees == "0.025" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >2.5%
+                                </option>
+                                <option value="0.022"
+                                        {% if payment_cryptapi_fees == "0.022" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >2.2%
+                                </option>
+                                <option value="0.02"
+                                        {% if payment_cryptapi_fees == "0.02" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >2%
+                                </option>
+                                <option value="0.018"
+                                        {% if payment_cryptapi_fees == "0.018" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >1.8%
+                                </option>
+                                <option value="0.015"
+                                        {% if payment_cryptapi_fees == "0.015" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >1.5%
+                                </option>
+                                <option value="0.012"
+                                        {% if payment_cryptapi_fees == "0.012" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >1.2%
+                                </option>
+                                <option value="0.01"
+                                        {% if payment_cryptapi_fees == "0.01" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >1%
+                                </option>
+                                <option value="0.0090"
+                                        {% if payment_cryptapi_fees == "0.0090" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.90%
+                                </option>
+                                <option value="0.0085"
+                                        {% if payment_cryptapi_fees == "0.0085" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.85%
+                                </option>
+                                <option value="0.0080"
+                                        {% if payment_cryptapi_fees == "0.0080" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.80%
+                                </option>
+                                <option value="0.0075"
+                                        {% if payment_cryptapi_fees == "0.0075" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.75%
+                                </option>
+                                <option value="0.0070"
+                                        {% if payment_cryptapi_fees == "0.0070" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.70%
+                                </option>
+                                <option value="0.0065"
+                                        {% if payment_cryptapi_fees == "0.0065" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.65%
+                                </option>
+                                <option value="0.0060"
+                                        {% if payment_cryptapi_fees == "0.0060" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.60%
+                                </option>
+                                <option value="0.0055"
+                                        {% if payment_cryptapi_fees == "0.0055" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.55%
+                                </option>
+                                <option value="0.0050"
+                                        {% if payment_cryptapi_fees == "0.0050" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.50%
+                                </option>
+                                <option value="0.0040"
+                                        {% if payment_cryptapi_fees == "0.0040" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.40%
+                                </option>
+                                <option value="0.0030"
+                                        {% if payment_cryptapi_fees == "0.0030" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.30%
+                                </option>
+                                <option value="0.0025"
+                                        {% if payment_cryptapi_fees == "0.0025" %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0.25%
+                                </option>
+                                <option value="0"
+                                        {% if payment_cryptapi_fees is empty or payment_cryptapi_fees == '0' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >0%
+                                </option>
                             </select>
                         </div>
                     </div>
@@ -113,6 +285,161 @@
                         <div class="col-sm-10">
                             <input class="form-control" type="text" id="cryptapi_qrcode_size" name='payment_cryptapi_qrcode_size'
                                    {% if payment_cryptapi_qrcode_size is empty %}value="300" {% else %}value="{{ payment_cryptapi_qrcode_size }}"{% endif %}>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_qrcode">
+                            <span data-toggle="tooltip" title="{{ text_qrcode }}">
+                               {{ qrcode }}
+                            </span>
+                        </label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_qrcode" id="cryptapi_qrcode" class="form-control">
+                                <option value="without_ammount"
+                                        {% if payment_cryptapi_qrcode is empty or payment_cryptapi_qrcode == 'without_ammount' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ qrcode_without_ammount }}</option>
+                                <option value="ammount"
+                                        {% if payment_cryptapi_qrcode == 'ammount' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ qrcode_ammount }}</option>
+                                <option value="hide_ammount"
+                                        {% if payment_cryptapi_qrcode == 'hide_ammount' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ qrcode_hide_ammount }}</option>
+                                <option value="hide_without_ammount"
+                                        {% if payment_cryptapi_qrcode == 'hide_without_ammount' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ qrcode_hide_without_ammount }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_color_scheme">
+                            {{ color_scheme }}
+                        </label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_color_scheme" id="cryptapi_color_scheme" class="form-control">
+                                <option value="light"
+                                        {% if payment_cryptapi_color_scheme is empty or payment_cryptapi_color_scheme == 'light' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ scheme_light }}</option>
+                                <option value="dark"
+                                        {% if payment_cryptapi_color_scheme == 'dark' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ scheme_dark }}</option>
+                                <option value="auto"
+                                        {% if payment_cryptapi_color_scheme == 'auto' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ scheme_auto }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_refresh_values">
+                            <span data-toggle="tooltip" title="{{ text_refresh_values }}">
+                               {{ refresh_values }}
+                            </span>
+                        </label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_refresh_values" id="cryptapi_refresh_values" class="form-control">
+                                <option value="0"
+                                        {% if payment_cryptapi_refresh_values == '0' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ never }}
+                                </option>
+                                <option value="300"
+                                        {% if payment_cryptapi_refresh_values is empty or payment_cryptapi_refresh_values == '300' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ five_minutes }}
+                                </option>
+                                <option value="600"
+                                        {% if payment_cryptapi_refresh_values == '600' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ ten_minutes }}
+                                </option>
+                                <option value="900"
+                                        {% if payment_cryptapi_refresh_values == '900' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ fifteen_minutes }}
+                                </option>
+                                <option value="1800"
+                                        {% if payment_cryptapi_refresh_values == '1800' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ thirty_minutes }}
+                                </option>
+                                <option value="2700"
+                                        {% if payment_cryptapi_refresh_values == '2700' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ forty_five_minutes }}
+                                </option>
+                                <option value="3600"
+                                        {% if payment_cryptapi_refresh_values == '3600' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ sixty_minutes }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_order_cancelation_timeout">
+                            <span data-toggle="tooltip" title="{{ text_order_cancelation_timeout }}">
+                               {{ order_cancelation_timeout  }}
+                            </span>
+                        </label>
+                        <div class="col-sm-10">
+                            <select name="payment_cryptapi_order_cancelation_timeout" id="cryptapi_order_cancelation_timeout" class="form-control">
+                                <option value="0"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '0' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ never }}
+                                </option>
+                                <option value="3600"
+                                        {% if payment_cryptapi_order_cancelation_timeout is empty or payment_cryptapi_order_cancelation_timeout == '3600' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ one_hour }}
+                                </option>
+                                <option value="21600"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '21600' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ six_hours }}
+                                </option>
+                                <option value="43200"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '21600' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ twelve_hours }}
+                                </option>
+                                <option value="64800"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '64800' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ eighteen_hours }}
+                                </option>
+                                <option value="86400"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '86400' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ twenty_four_hours }}
+                                </option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group">
@@ -150,6 +477,34 @@
                             <input type="text" name="payment_cryptapi_sort_order" value="{{ payment_cryptapi_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order"
                                    class="form-control"/>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-12 text-center" style="margin-bottom: 20px">
+                            <label class="control-label text-center" style="float: none !important;">
+                            <span data-toggle="tooltip" title="{{ help_cryptocurrencies }}">
+                                {{ entry_cryptocurrencies }}
+                            </span>
+                            </label>
+                        </div>
+                        <input type="hidden" id="cryptapi_cryptocurrencies_array_cache" name="payment_cryptapi_cryptocurrencies_array_cache"
+                               value='{{ payment_cryptapi_cryptocurrencies_array|json_encode() }}'>
+                        {% for ticker, coin in payment_cryptapi_cryptocurrencies_array %}
+                            <div class="col-sm-2 text-right">
+                                <input type='checkbox' name='payment_cryptapi_cryptocurrencies[{{ ticker }}]' id="cryptapi_cryptocurrencies_{{ ticker }}"
+                                       value='{{ ticker }}' {{ payment_cryptapi_cryptocurrencies[ticker]  is defined and payment_cryptapi_cryptocurrencies[ticker]  == ticker ? 'checked="checked"' : '' }} />
+                                <label class="control-label" for="cryptapi_cryptocurrencies_{{ ticker }}">
+                                    <span data-toggle="tooltip" title="{{ help_cryptocurrency }} {{ coin }}">
+                                        {{ coin }}
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-sm-10">
+                                <p>
+                                    <input class="form-control" type="text" id="cryptapi_cryptocurrencies_address_{{ ticker }}" name='payment_cryptapi_cryptocurrencies_address_{{ ticker }}'
+                                           placeholder="{{ coin }}" value="{{ attribute(_context, 'payment_cryptapi_cryptocurrencies_address_' ~ ticker) }}">
+                                </p>
+                            </div>
+                        {% endfor %}
                     </div>
                     <div class="form-group">
                         <label class="col-sm-2 control-label" for="input-status">{{ disable_conversion }}</label>
