@@ -18,32 +18,50 @@ All you need is to provide your crypto address.
 
 The CryptAPI extension enables your OpenCart store to get receive payments in cryptocurrency, with a simple setup and no sign-ups required.
 
-Currently accepted cryptocurrencies are:
+= Accepted cryptocurrencies & tokens include: =
 
 * (BTC) Bitcoin
+* (ETH) Ethereum
 * (BCH) Bitcoin Cash
 * (LTC) Litecoin
-* (ETH) Ethereum
 * (XMR) Monero
-* (IOTA) IOTA
+* (TRX) Tron
+* (BNB) Binance Coin
+* (USDT) USDT
+* (SHIB) Shiba Inu
+* (DOGE) Dogecoin
+
+
+among many others, for a full list of the supported cryptocurrencies and tokens, check [this page](https://cryptapi.io/pricing/).
+
+= Auto-value conversion =
 
 CryptAPI will attempt to automatically convert the value you set on your store to the cryptocurrency your customer chose.
-Exchange rates are fetched hourly from CoinMarketCap.
+
+Exchange rates are fetched every 5 minutes from CoinGecko.
 
 Supported currencies for automatic exchange rates are:
 
-* (USD) United States Dollar
-* (EUR) Euro
-* (GBP) Great Britain Pound
-* (JPY) Japanese Yen
-* (CNY) Chinese Yuan
+* (XAF) CFA Franc
+* (RON) Romanian Leu
+* (BGN) Bulgarian Lev
+* (HUF) Hungarian Forint
+* (CZK) Czech Koruna
+* (PHP) Philippine Peso
+* (PLN) Poland Zloti
+* (UGX) Uganda Shillings
+* (MXN) Mexican Peso
 * (INR) Indian Rupee
-* (CAD) Canadian Dollar
 * (HKD) Hong Kong Dollar
+* (CNY) Chinese Yuan
 * (BRL) Brazilian Real
 * (DKK) Danish Krone
-* (MXN) Mexican Peso
-* (AED) United Arab Emirates Dirham
+* (AED) UAE Dirham
+* (JPY) Japanese Yen
+* (CAD) Canadian Dollar
+* (GBP) GB Pound
+* (EUR) Euro
+* (USD) US Dollar
 
 If your OpenCart's currency is none of the above, the exchange rates will default to USD.
 If you're using OpenCart in a different currency not listed here and need support, please [contact us](https://cryptapi.io) via our live chat.
@@ -74,6 +92,10 @@ For more info on our fees [click here](https://cryptapi.io/get_started/#fees)
 8. Save Changes
 9. All done! 
 
+### Cronjob
+
+Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL ``YOUR-DOMAIN/index.php?route=extension/payment/cryptapi/cron``.
+
 ### Frequently Asked Questions
 
 #### Do I need an API key?
@@ -103,5 +125,21 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 #### 1.0
 * Initial release.
 
-### Upgrade Notice
-* Initial release.
+####  2.0
+* New coins
+* Updated codebase
+* New API URL
+
+#### 3.0 
+* New settings and color schemes to fit dark mode
+* New settings to add CryptAPI's services fees to the checkout
+* New settings to add blockchain fees to the checkout
+* Upgrade the settings
+* Added a history of transactions to the order payment page
+* Better handling of partial payments
+* Disable QR Code with value in certain currencies due to some wallets not supporting it
+* Minor fixes
+* UI Improvements
+
+#### Upgrade Notice
+* No breaking changes
