@@ -14,18 +14,18 @@
     <div class="ca_payment_details">
         <div class="ca_payments_wrapper">
             <div class="ca_qrcode_wrapper"
-                 style="{% if qr_code_setting == 'hide_ammount' or qr_code_setting =='hide_without_ammount' %}display: none;{% endif %}; width: {{ qr_code_size + 20 }}px;">
+                 style="{% if qrcode_default == '0' %}display: none;{% endif %}; width: {{ qr_code_size + 20 }}px;">
                 {% if crypto_allowed_value == true %}
                     <div class="inner-wrapper">
                         <figure>
-                            {% if qr_code_setting != 'hide_ammount' %}
+                            {% if qr_code_setting != 'hide_without_ammount' %}
                                 <img class="ca_qrcode no_value"
                                         {% if qr_code_setting == 'ammount' %}
                                             style="display:none;"
                                         {% endif %}
                                      src="data:image/png;base64,{{ qr_code }}" alt="{{ qrcode_alt_text }}"/>
                             {% endif %}
-                            {% if qr_code_setting != 'hide_without_ammount' %}
+                            {% if qr_code_setting != 'hide_ammount' %}
                                 <img class="ca_qrcode value"
                                         {% if qr_code_setting == 'without_ammount' %}
                                             style="display:none;"
@@ -33,11 +33,11 @@
                                      alt="{{ qrcode_alt_value_text }}"/>
                             {% endif %}
                         </figure>
-                        {% if qr_code_setting != 'hide_ammount' and  qr_code_setting != 'hide_without_ammount' %}
+                        {% if qr_code_setting != 'hide_without_ammount' %}
                             <div class="ca_qrcode_buttons">
                                 {% if qr_code_setting != 'hide_without_ammount' %}
                                     <button class="ca_qrcode_btn no_value
-                        {% if qr_code_setting == 'without_ammount' %}
+                        {% if qr_code_setting == 'without_ammount' or qr_code_setting == 'hide_ammount' %}
                          active
                          {% endif %}" aria-label="{{ qrcode_alt_show_value }}">
                                         {{ qrcode_button_noamount_text }}
@@ -45,7 +45,7 @@
                                 {% endif %}
                                 {% if qr_code_setting != 'hide_ammount' %}
                                     <button class="ca_qrcode_btn value
-                        {% if qr_code_setting == 'ammount' %}
+                        {% if qr_code_setting == 'ammount' or qr_code_setting == 'hide_without_ammount' %}
                          active
                          {% endif %}" aria-label="{{ qrcode_alt_show_value }}">
                                         {{ qrcode_button_amount_text }}
@@ -85,7 +85,7 @@
                 <div class="ca_payment_notification ca_notification_remaining" style="display: none">
                     <strong>{{ text_notice }}</strong>: {{ notification_remaining|format(min_tx_notice) }}
                 </div>
-                {% if refresh_value_interval != 'none' %}
+                {% if refresh_value_interval != '0' %}
                     <div class="ca_time_refresh">
                         {{ order_value_refresh|format(crypto_coin|upper) }}
                         <span class="ca_time_seconds_count" data-soon="{{ text_moment }}" data-seconds="{{ conversion_timer }}">{{ conversion_timer|date('i:s') }}</span>
@@ -100,7 +100,7 @@
                     <div class="ca_loader"></div>
                 </div>
             </div>
-            {% if order_cancelation_timeout != 'none' %}
+            {% if order_cancelation_timeout != '0' %}
                 <span class="ca_notification_cancel" data-text="{{ order_cancelled_minute }}">
                 {{ order_valid_time|format(cancel_timer, cancel_timer|date('H:i')) }}
                 </span>

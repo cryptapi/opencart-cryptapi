@@ -35,6 +35,7 @@ $_['entry_status'] = 'Status';
 
 $_['branding'] = 'Show CryptAPI logo and credits below the QR code';
 
+$_['qrcode_default'] = 'Show QR Code';
 $_['qrcode'] = 'QR Code to show';
 $_['qrcode_size'] = 'QR Code size';
 $_['qrcode_without_ammount'] = 'Default Without Ammount';
@@ -79,3 +80,7 @@ $_['text_payment_info'] = 'Payment information';
 $_['disable_conversion'] = 'Disable Conversion';
 $_['disable_conversion_warn_bold'] = 'Attention: This option will disable the price conversion for ALL cryptocurrencies!';
 $_['disable_conversion_warn'] = 'If you check this, pricing will not be converted from the currency of your shop to the cryptocurrency selected by the user, and users will be requested to pay the same value as shown on your shop, regardless of the cryptocurrency selected';
+
+
+$_['api_key'] = 'API Key';
+$_['api_key_info'] = "Insert here your CryptAPI Pro API Key. You can get one with CryptAPI Pro. Notice: If API permission 'Address Override' is not enabled you must set the address in the dashboard otherwise payments may fail.";

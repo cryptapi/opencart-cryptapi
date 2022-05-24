@@ -113,6 +113,12 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $data['payment_cryptapi_title'] = $this->config->get('payment_cryptapi_title');
         }
 
+        if (isset($this->request->post['payment_cryptapi_api_key'])) {
+            $data['payment_cryptapi_api_key'] = $this->request->post['payment_cryptapi_api_key'];
+        } else {
+            $data['payment_cryptapi_api_key'] = $this->config->get('payment_cryptapi_api_key');
+        }
+
         if (isset($this->request->post['payment_cryptapi_standard_geo_zone_id'])) {
             $data['payment_cryptapi_standard_geo_zone_id'] = $this->request->post['payment_cryptapi_standard_geo_zone_id'];
         } else {
@@ -174,6 +180,12 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $data['payment_cryptapi_qrcode'] = $this->request->post['payment_cryptapi_qrcode'];
         } else {
             $data['payment_cryptapi_qrcode'] = $this->config->get('payment_cryptapi_qrcode');
+        }
+
+        if (isset($this->request->post['payment_cryptapi_qrcode_default'])) {
+            $data['payment_cryptapi_qrcode_default'] = $this->request->post['payment_cryptapi_qrcode_default'];
+        } else {
+            $data['payment_cryptapi_qrcode_default'] = $this->config->get('payment_cryptapi_qrcode_default');
         }
 
         if (isset($this->request->post['payment_cryptapi_qrcode_size'])) {
