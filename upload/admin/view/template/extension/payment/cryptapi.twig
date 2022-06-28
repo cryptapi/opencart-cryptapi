@@ -55,17 +55,6 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-2 control-label" for="cryptapi_cryptapi_api_key">
-                            <span data-toggle="tooltip" title="{{ api_key_info }}">
-                                {{ api_key }}
-                            </span>
-                        </label>
-                        <div class="col-sm-10">
-                            <input class="form-control" type="text" id="cryptapi_cryptapi_api_key" name='payment_cryptapi_api_key'
-                                   {% if payment_cryptapi_api_key is empty %}value="" {% else %}value="{{ payment_cryptapi_api_key }}"{% endif %}>
-                        </div>
-                    </div>
-                    <div class="form-group">
                         <label class="col-sm-2 control-label" for="cryptapi_branding">{{ branding }}</label>
                         <div class="col-sm-10">
                             <select name="payment_cryptapi_branding" id="cryptapi_branding" class="form-control">
@@ -509,12 +498,25 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label class="col-sm-2 control-label" for="cryptapi_cryptapi_api_key">
+                            {{ api_key }}
+                        </label>
+                        <div class="col-sm-10">
+                            <input class="form-control" type="text" id="cryptapi_cryptapi_api_key" name='payment_cryptapi_api_key'
+                                   {% if payment_cryptapi_api_key is empty %}value="" {% else %}value="{{ payment_cryptapi_api_key }}"{% endif %}>
+                            <p class="mt-2">
+                                {{ api_key_info }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <div class="col-12 text-center" style="margin-bottom: 20px">
                             <label class="control-label text-center" style="float: none !important;">
-                            <span data-toggle="tooltip" title="{{ help_cryptocurrencies }}">
                                 {{ entry_cryptocurrencies }}
-                            </span>
                             </label>
+                            <p>
+                                {{ help_cryptocurrencies }}
+                            </p>
                         </div>
                         <input type="hidden" id="cryptapi_cryptocurrencies_array_cache" name="payment_cryptapi_cryptocurrencies_array_cache"
                                value='{{ payment_cryptapi_cryptocurrencies_array|json_encode() }}'>

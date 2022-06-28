@@ -145,5 +145,8 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * Support CryptAPI Pro
 * Minor fixes
 
+#### 3.1.1
+* Minor fixes
+
 == Upgrade Notice ==
 * No breaking changes

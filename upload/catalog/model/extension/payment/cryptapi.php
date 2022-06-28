@@ -55,9 +55,11 @@ class ModelExtensionPaymentCryptapi extends Model
 
         if (count($cryptocurrencies) > 0) {
             foreach ($cryptocurrencies as $token => $coin) {
-                if ($coin && !empty($this->config->get('payment_cryptapi_cryptocurrencies_address_' . $token))) {
-                    $status = true;
-                    break;
+                if ($coin) {
+                    if(!empty($this->config->get('payment_cryptapi_cryptocurrencies_address_' . $token) || !empty($this->config->get('payment_cryptapi_api_key')))) {
+                        $status = true;
+                        break;
+                    }
                 }
             }
         }

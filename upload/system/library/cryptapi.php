@@ -33,9 +33,15 @@
     public function get_address()
     {
 
-        if (empty($this->own_address) || empty($this->coin) || empty($this->callback_url)) return null;
+        if (empty($this->coin) || empty($this->callback_url)) {
+            return null;
+        }
 
         $api_key = $this->api_key;
+
+        if (empty($api_key) && empty($this->own_address)) {
+            return null;
+        }
 
         $callback_url = $this->callback_url;
         if (!empty($this->parameters)) {
@@ -43,13 +49,19 @@
             $callback_url = "{$this->callback_url}?{$req_parameters}";
         }
 
-        if (empty($api_key)) {
+        if (!empty($api_key) && empty($this->own_address)) {
+            $ca_params = [
+                'apikey' => $api_key,
+                'callback' => $callback_url,
+                'pending' => $this->pending,
+            ];
+        } elseif (empty($api_key) && !empty($this->own_address)) {
             $ca_params = [
                 'callback' => $callback_url,
                 'address' => $this->own_address,
                 'pending' => $this->pending,
             ];
-        } else {
+        } elseif(!empty($api_key) && !empty($this->own_address)) {
             $ca_params = [
                 'apikey' => $api_key,
                 'callback' => $callback_url,

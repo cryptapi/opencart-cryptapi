@@ -81,7 +81,9 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $selected = $this->request->post['cryptapi_coin'];
             $address = $this->config->get('payment_cryptapi_cryptocurrencies_address_' . $selected);
 
-            if (!empty($address)) {
+            $apiKey = $this->config->get('payment_cryptapi_api_key');
+
+            if (!empty($address) || !empty($apiKey)) {
                 $nonce = $this->model_extension_payment_cryptapi->generateNonce();
 
                 require_once(DIR_SYSTEM . 'library/cryptapi.php');
@@ -103,7 +105,6 @@ class ControllerExtensionPaymentCryptapi extends Controller
                     $callbackUrl = $this->url->link('extension/payment/cryptapi/callback', 'order_id=' . $this->session->data['order_id'] . '&nonce=' . $nonce, true);
                     $callbackUrl = str_replace('&amp;', '&', $callbackUrl);
 
-                    $apiKey = $this->config->get('payment_cryptapi_api_key');
 
                     $helper = new CryptAPIHelper($selected, $address, $apiKey, $callbackUrl, [], true);
                     $addressIn = $helper->get_address();

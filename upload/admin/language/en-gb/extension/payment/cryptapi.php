@@ -70,8 +70,8 @@ $_['entry_sort_order'] = 'Sort order';
 $_['error_permission'] = 'Warning: You do not have permission to modify the CryptAPI payment module';
 
 // Help hints
-$_['help_cryptocurrencies'] = 'Select which coins do you wish to accept (Don\'t forget to paste your address in the respective field).';
-$_['help_cryptocurrency'] = 'Click the checkbox to enable ';
+$_['help_cryptocurrencies'] = 'If you are using CryptAPI Pro you can choose if setting the receiving addresses here bellow or in your CryptAPI Pro settings page.<br/>- In order to set the addresses on plugin settings, you need to select “Address Override” while creating the API key.<br/>- In order to set the addresses on CryptAPI Pro settings, you need to NOT select “Address Override” while creating the API key.';
+$_['help_cryptocurrency'] = 'Click the checkbox to enable the cryptocurrency';
 
 
 // Order page - payment tab
