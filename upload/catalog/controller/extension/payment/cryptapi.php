@@ -8,6 +8,12 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
         $this->load->language('extension/payment/cryptapi');
 
+        $data['text_legend'] = $this->language->get('text_legend');
+        $data['button_confirm'] = $this->language->get('button_confirm');
+        $data['text_processing'] = $this->language->get('text_processing');
+        $data['text_paywith'] = $this->language->get('text_paywith');
+        $data['column_total'] = $this->language->get('column_total');
+
         $this->load->model('extension/payment/cryptapi');
 
         $data['title'] = $this->config->get('payment_cryptapi_title');
@@ -44,7 +50,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
         $cryptapiFee = 0;
 
         if ($_POST) {
-            if ($fee != 0) {
+            if ($fee != 'none') {
                 $cryptapiFee += floatval($fee) * $order_total;
             }
 
@@ -79,8 +85,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $currency = $this->session->data['currency'];
 
             $selected = $this->request->post['cryptapi_coin'];
-            $address = $this->config->get('payment_cryptapi_cryptocurrencies_address_' . $selected);
-
+            $address = $this->config->get('payment_cryptapi_cryptocurrencies_address')[$selected];
             $apiKey = $this->config->get('payment_cryptapi_api_key');
 
             if (!empty($address) || !empty($apiKey)) {
@@ -104,6 +109,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
                 } else {
                     $callbackUrl = $this->url->link('extension/payment/cryptapi/callback', 'order_id=' . $this->session->data['order_id'] . '&nonce=' . $nonce, true);
                     $callbackUrl = str_replace('&amp;', '&', $callbackUrl);
+
 
 
                     $helper = new CryptAPIHelper($selected, $address, $apiKey, $callbackUrl, [], true);
@@ -155,13 +161,12 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $order = $this->model_checkout_order->getOrder($order_id);
 
             $this->load->model('setting/setting');
-            $setting = $this->model_setting_setting;
 
             if ($order && $order['payment_code'] != 'cryptapi') {
                 $order = false;
             }
 
-            if (!$status && $order && $order['order_status_id'] != $setting->getSettingValue('payment_cryptapi_order_status_id')) {
+            if (!$status && $order && $order['order_status_id'] != $this->config->get('payment_cryptapi_order_status_id')) {
                 $order = false;
             }
         }
@@ -171,10 +176,10 @@ class ControllerExtensionPaymentCryptapi extends Controller
     public function before_checkout_success(&$route, &$data)
     {
         $this->load->model('setting/setting');
-        $setting = $this->model_setting_setting;
+
 
         // In case the extension is disabled, do nothing
-        if (!$setting->getSettingValue('payment_cryptapi_status')) {
+        if (!$this->config->get('cryptapi_status')) {
             return;
         }
 
@@ -191,10 +196,9 @@ class ControllerExtensionPaymentCryptapi extends Controller
     public function after_purchase(&$route, &$data, &$output)
     {
         $this->load->model('setting/setting');
-        $setting = $this->model_setting_setting;
 
         // In case the extension is disabled, do nothing
-        if (!$setting->getSettingValue('payment_cryptapi_status')) {
+        if (!$this->config->get('cryptapi_status')) {
             return;
         }
 
@@ -264,12 +268,41 @@ class ControllerExtensionPaymentCryptapi extends Controller
             'refresh_value_interval' => $this->config->get('payment_cryptapi_refresh_values'),
             'last_price_update' => $metaData['cryptapi_last_price_update'],
             'min_tx' => $metaData['cryptapi_min'],
-            'min_tx_notice' => (string)$metaData['cryptapi_min'] . ' ' . strtoupper($cryptoCoin),
-
             'color_scheme' => $this->config->get('payment_cryptapi_color_scheme'),
+            'qrcode_default' => $this->config->get('payment_cryptapi_qrcode_default'),
             'conversion_timer' => (int)$conversion_timer,
             'cancel_timer' => (int)$cancel_timer,
             'crypto_allowed_value' => $crypto_allowed_value,
+
+            'text_copy' => $this->language->get('text_copy'),
+            'text_copied' => $this->language->get('text_copied'),
+            'wallet_text' => $this->language->get('wallet_text'),
+            'qr_code_text' => $this->language->get('qr_code_text'),
+            'qrcode_show_text' => $this->language->get('qrcode_show_text'),
+            'qrcode_button_amount_text' => $this->language->get('qrcode_button_amount_text'),
+            'qrcode_button_noamount_text' => $this->language->get('qrcode_button_noamount_text'),
+            'qrcode_alt_value_text' => $this->language->get('qrcode_alt_value_text'),
+            'qrcode_alt_text' => $this->language->get('qrcode_alt_text'),
+            'qrcode_alt_show_text' => $this->language->get('qrcode_alt_show_text'),
+            'qrcode_alt_show_value_text' => $this->language->get('qrcode_alt_show_value_text'),
+            'qr_code_text_open' => $this->language->get('qr_code_text_open'),
+            'qr_code_text_close' => $this->language->get('qr_code_text_close'),
+            'payment_confirmed_text' => $this->language->get('payment_confirmed_text'),
+            'waiting_payment_text' => $this->language->get('waiting_payment_text'),
+            'waiting_network_confirmation_text' => $this->language->get('waiting_network_confirmation_text'),
+            'payment_confirmed_simple_text' => $this->language->get('payment_confirmed_simple_text'),
+            'please_send_text' => $this->language->get('please_send_text'),
+            'payment_notification' => $this->language->get('payment_notification'),
+            'order_value_refresh' => $this->language->get('order_value_refresh'),
+            'text_moment' => $this->language->get('text_moment'),
+            'notification_remaining' => $this->language->get('notification_remaining'),
+            'order_valid_time' => $this->language->get('order_valid_time'),
+            'branding_logo' => $this->language->get('branding_logo'),
+            'table_time' => $this->language->get('table_time'),
+            'table_value_paid' => $this->language->get('table_value_paid'),
+            'table_fiat_value' => $this->language->get('table_fiat_value'),
+            'payment_being_processed' => $this->language->get('payment_being_processed'),
+            'processing_blockchain' => $this->language->get('processing_blockchain'),
         ];
 
         $output = $this->load->view('extension/payment/cryptapi_success', $params);
@@ -278,8 +311,8 @@ class ControllerExtensionPaymentCryptapi extends Controller
     public function isOrderPaid($order)
     {
         $paid = 0;
-        $successOrderStatuses = [2, 3, 15];
-        if (in_array($order['order_status_id'], $successOrderStatuses)) {
+        $succcessOrderStatues = [2, 3, 15];
+        if (in_array($order['order_status_id'], $succcessOrderStatues)) {
             $paid = 1;
         }
         return $paid;
@@ -306,7 +339,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
         $currencySymbolLeft = $this->model_localisation_currency->getCurrencies()[$order['currency_code']]['symbol_left'];
         $currencySymbolRight = $this->model_localisation_currency->getCurrencies()[$order['currency_code']]['symbol_right'];
 
-        $showMinFee = 0;
+        $showMinFee = '0';
 
         $history = json_decode($metaData['cryptapi_history'], true);
 
@@ -320,7 +353,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
         $remaining_pending = $calc['remaining_pending'];
         $remaining_fiat = $calc['remaining_fiat'];
 
-        $cryptapi_pending = 0;
+        $cryptapi_pending = '0';
         if ($remaining_pending <= 0 && !$this->isOrderPaid($order)) {
             $cryptapi_pending = 1;
         }
@@ -332,19 +365,19 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
         if ($remaining_pending <= $min_tx && $remaining_pending > 0) {
             $remaining_pending = $min_tx;
-            $showMinFee = 1;
+            $showMinFee = '1';
         }
 
         $data = [
             'is_paid' => $this->isOrderPaid($order),
-            'is_pending' => $cryptapi_pending,
+            'is_pending' => (int)($cryptapi_pending),
             'crypto_total' => floatval($metaData['cryptapi_total']),
             'qr_code_value' => $metaData['cryptapi_qrcode_value'],
             'cancelled' => $metaData['cryptapi_cancelled'],
             'remaining' => $remaining_pending < 0 ? 0 : $remaining_pending,
             'fiat_remaining' => $currencySymbolLeft . $remaining_fiat . $currencySymbolRight,
             'coin' => strtoupper($metaData['cryptapi_currency']),
-            'show_min_fee' => $showMinFee,
+            'show_min_fee' => (int)$showMinFee,
             'order_history' => $history,
             'already_paid' => $currencySymbolLeft . $already_paid . $currencySymbolRight,
             'already_paid_fiat' => floatval($already_paid_fiat) <= 0 ? 0 : floatval($already_paid_fiat), true, false,
@@ -365,8 +398,8 @@ class ControllerExtensionPaymentCryptapi extends Controller
         $this->response->addHeader('Content-Type: application/json');
 
         $order_timeout = intval($this->config->get('payment_cryptapi_order_cancelation_timeout'));
-        $value_refresh = intval($this->config->get('payment_cryptapi_refresh_values'));
-        $qrcode_size = intval($this->config->get('payment_cryptapi_qrcode_size'));
+        $value_refresh = intval($this->config->get('payment_cryptapi_refresh_value_interval'));
+        $qrcode_size = $this->config->get('payment_cryptapi_qrcode_size');
 
         $response = $this->response->setOutput(json_encode(['status' => 'ok']));
 
@@ -401,17 +434,15 @@ class ControllerExtensionPaymentCryptapi extends Controller
                 $remaining_pending = $calc['remaining_pending'];
                 $already_paid = $calc['already_paid'];
 
-                if ($value_refresh !== 0 && $last_price_update + $value_refresh <= time() && !empty($last_price_update)) {
+                if ($value_refresh !== 'none' && $last_price_update + $value_refresh <= time() && !empty($last_price_update)) {
 
                     if ($remaining === $remaining_pending) {
                         $cryptapi_coin = $metaData['cryptapi_currency'];
 
-                        $crypto_total = CryptAPIHelper::get_conversion($currency, $cryptapi_coin, $metaData['cryptapi_total_fiat'], $this->disable_conversion);
-
+                        $crypto_total = CryptAPIHelper::get_conversion($currency, $cryptapi_coin, $order['total'], $this->disable_conversion);
                         $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_total', $crypto_total);
 
-                        $calc_cron = CryptAPIHelper::calc_order($history, $crypto_total, $metaData['cryptapi_total_fiat']);
-
+                        $calc_cron = CryptAPIHelper::calc_order($history, $metaData['cryptapi_total'], $metaData['cryptapi_total_fiat']);
                         $crypto_remaining_total = $calc_cron['remaining_pending'];
 
                         if ($remaining_pending <= $min_tx && $remaining_pending > 0) {
@@ -426,7 +457,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
                     $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_last_price_update', time());
                 }
 
-                if ($order_timeout !== 0 && (strtotime($order['date_added']) + $order_timeout) <= time() && $already_paid <=0 && (int)$metaData['cryptapi_cancelled'] === 0) {
+                if ($order_timeout !== 'none' && (strtotime($order['date_added']) + $order_timeout) <= time() && $already_paid <= 0 && (int)$metaData['cryptapi_cancelled'] === 0) {
                     $processing_state = 7;
                     $this->model_checkout_order->addOrderHistory($order['order_id'], $processing_state);
                 }

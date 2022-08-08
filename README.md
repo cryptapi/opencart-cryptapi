@@ -6,7 +6,7 @@ Accept cryptocurrency payments on your OpenCart store
 ### Requirements:
 
 ```
-OpenCart >= 3.0
+OpenCart = 2.3
 ```
 
 ### Description
@@ -18,50 +18,32 @@ All you need is to provide your crypto address.
 
 The CryptAPI extension enables your OpenCart store to get receive payments in cryptocurrency, with a simple setup and no sign-ups required.
 
-= Accepted cryptocurrencies & tokens include: =
+Currently accepted cryptocurrencies are:
 
 * (BTC) Bitcoin
-* (ETH) Ethereum
 * (BCH) Bitcoin Cash
 * (LTC) Litecoin
+* (ETH) Ethereum
 * (XMR) Monero
-* (TRX) Tron
-* (BNB) Binance Coin
-* (USDT) USDT
-* (SHIB) Shiba Inu
-* (DOGE) Dogecoin
-
-
-among many others, for a full list of the supported cryptocurrencies and tokens, check [this page](https://cryptapi.io/pricing/).
-
-= Auto-value conversion =
+* (IOTA) IOTA
 
 CryptAPI will attempt to automatically convert the value you set on your store to the cryptocurrency your customer chose.
-
-Exchange rates are fetched every 5 minutes from CoinGecko.
+Exchange rates are fetched hourly from CoinMarketCap.
 
 Supported currencies for automatic exchange rates are:
 
-* (XAF) CFA Franc
-* (RON) Romanian Leu
-* (BGN) Bulgarian Lev
-* (HUF) Hungarian Forint
-* (CZK) Czech Koruna
-* (PHP) Philippine Peso
-* (PLN) Poland Zloti
-* (UGX) Uganda Shillings
-* (MXN) Mexican Peso
-* (INR) Indian Rupee
-* (HKD) Hong Kong Dollar
+* (USD) United States Dollar
+* (EUR) Euro
+* (GBP) Great Britain Pound
+* (JPY) Japanese Yen
 * (CNY) Chinese Yuan
+* (INR) Indian Rupee
+* (CAD) Canadian Dollar
+* (HKD) Hong Kong Dollar
 * (BRL) Brazilian Real
 * (DKK) Danish Krone
-* (AED) UAE Dirham
-* (JPY) Japanese Yen
-* (CAD) Canadian Dollar
-* (GBP) GB Pound
-* (EUR) Euro
-* (USD) US Dollar
+* (MXN) Mexican Peso
+* (AED) United Arab Emirates Dirham
 
 If your OpenCart's currency is none of the above, the exchange rates will default to USD.
 If you're using OpenCart in a different currency not listed here and need support, please [contact us](https://cryptapi.io) via our live chat.
@@ -125,7 +107,7 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 #### 1.0
 * Initial release.
 
-####  2.0
+#### 2.0
 * New coins
 * Updated codebase
 * New API URL
@@ -148,5 +130,5 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 #### 3.1.1
 * Minor fixes
 
-== Upgrade Notice ==
-* No breaking changes
+### Upgrade Notice
+* Initial release.

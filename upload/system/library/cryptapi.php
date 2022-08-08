@@ -8,7 +8,7 @@
  * CryptAPIHelper class
  */
 
- class CryptAPIHelper
+class CryptAPIHelper
 {
     private static $base_url = "https://api.cryptapi.io";
     private static $pro_url = "https://pro-api.cryptapi.io";

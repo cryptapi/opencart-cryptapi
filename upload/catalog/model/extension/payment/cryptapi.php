@@ -6,17 +6,9 @@ class ModelExtensionPaymentCryptapi extends Model
     {
         $this->load->language('extension/payment/cryptapi');
 
-        if ($this->config->get('payment_cryptapi_status')) {
-            $query = $this->db->query("SELECT * FROM " . DB_PREFIX . "zone_to_geo_zone WHERE geo_zone_id = '" . (int)$this->config->get('payment_eway_standard_geo_zone_id') . "' AND country_id = '" . (int)$address['country_id'] . "' AND (zone_id = '" . (int)$address['zone_id'] . "' OR zone_id = '0')");
-            if (!$this->config->get('payment_cryptapi_standard_geo_zone_id')) {
-                $status = true;
-            } elseif ($query->num_rows) {
-                $status = true;
-            } else {
-                $status = false;
-            }
-        } else {
-            $status = false;
+
+        if (intval($this->config->get('cryptapi_status'))) {
+            $status = true;
         }
 
         if ($status) {
@@ -33,6 +25,7 @@ class ModelExtensionPaymentCryptapi extends Model
                 'sort_order' => $this->config->get('payment_cryptapi_sort_order')
             );
         }
+
 
         return $method_data;
     }
@@ -55,14 +48,15 @@ class ModelExtensionPaymentCryptapi extends Model
 
         if (count($cryptocurrencies) > 0) {
             foreach ($cryptocurrencies as $token => $coin) {
+
                 if ($coin) {
-                    if(!empty($this->config->get('payment_cryptapi_cryptocurrencies_address_' . $token) || !empty($this->config->get('payment_cryptapi_api_key')))) {
-                        $status = true;
-                        break;
-                    }
+                    if(!empty($this->config->get('payment_cryptapi_cryptocurrencies_address')[$token]) || !empty($this->config->get('payment_cryptapi_api_key')))
+                    $status = true;
+                    break;
                 }
             }
         }
+
         return $status;
     }
 

@@ -17,7 +17,7 @@ $_['text_edit'] = 'Edit CryptAPI';
 $_['text_cryptapi'] = '<a target="_BLANK" href="https://cryptapi.io/"><img src="view/image/payment/cryptapi.png" alt="cryptapi" title="cryptapi" style="border: 1px solid #EEEEEE; height:37px" /></a>';
 $_['text_connect_cryptapi'] = 'This module allows you to accept CryptAPI Payments securely.';
 $_['text_cryptapi_image'] = '<a target="_BLANK" href="https://cryptapi.io/"><img src="view/image/payment/cryptapi.png" alt="cryptapi" title="cryptapi" class="img-fluid" /></a>';
-$_['text_cryptapi_suppport'] = 'If you need any help or have any suggestion, contact us via the live chat on our <a target="_blank" href="https://cryptapi.io">website</a>';
+$_['text_cryptapi_support'] = 'If you need any help or have any suggestion, contact us via the live chat on our <a target="_blank" href="https://cryptapi.io">website</a>';
 $_['text_blockchain_fees'] = 'This will add an estimation of the blockchain fee to the order value';
 $_['text_fees'] = 'Set the CryptAPI service fee you want to charge the costumer. Note: Fee you want to charge your costumers (to cover CryptAPI\'s fees fully or partially)';
 $_['text_qrcode'] = 'Select how you want to show the QR Code to the user. Either select a default to show first, or hide one of them.';
