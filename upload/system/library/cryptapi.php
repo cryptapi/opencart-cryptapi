@@ -7,26 +7,24 @@
 /**
  * CryptAPIHelper class
  */
-class CryptAPIHelper
+
+ class CryptAPIHelper
 {
     private static $base_url = "https://api.cryptapi.io";
+    private static $pro_url = "https://pro-api.cryptapi.io";
     private $own_address = null;
     private $payment_address = null;
     private $callback_url = null;
     private $coin = null;
     private $pending = false;
     private $parameters = [];
+    private $api_key = null;
 
-
-    public function __construct(
-        $coin,
-        $own_address,
-        $callback_url,
-        $parameters = [],
-        $pending = false)
+    public function __construct($coin, $own_address, $api_key, $callback_url, $parameters = [], $pending = false)
     {
         $this->own_address = $own_address;
         $this->callback_url = $callback_url;
+        $this->api_key = $api_key;
         $this->coin = $coin;
         $this->pending = $pending ? 1 : 0;
         $this->parameters = $parameters;
@@ -35,7 +33,15 @@ class CryptAPIHelper
     public function get_address()
     {
 
-        if (empty($this->own_address) || empty($this->coin) || empty($this->callback_url)) return null;
+        if (empty($this->coin) || empty($this->callback_url)) {
+            return null;
+        }
+
+        $api_key = $this->api_key;
+
+        if (empty($api_key) && empty($this->own_address)) {
+            return null;
+        }
 
         $callback_url = $this->callback_url;
         if (!empty($this->parameters)) {
@@ -43,16 +49,32 @@ class CryptAPIHelper
             $callback_url = "{$this->callback_url}?{$req_parameters}";
         }
 
-        $ca_params = [
-            'callback' => $callback_url,
-            'address' => $this->own_address,
-            'pending' => $this->pending,
-        ];
+        if (!empty($api_key) && empty($this->own_address)) {
+            $ca_params = [
+                'apikey' => $api_key,
+                'callback' => $callback_url,
+                'pending' => $this->pending,
+            ];
+        } elseif (empty($api_key) && !empty($this->own_address)) {
+            $ca_params = [
+                'callback' => $callback_url,
+                'address' => $this->own_address,
+                'pending' => $this->pending,
+            ];
+        } elseif(!empty($api_key) && !empty($this->own_address)) {
+            $ca_params = [
+                'apikey' => $api_key,
+                'callback' => $callback_url,
+                'address' => $this->own_address,
+                'pending' => $this->pending,
+            ];
+        }
 
         $response = CryptAPIHelper::_request($this->coin, 'create', $ca_params);
 
         if ($response->status == 'success') {
             $this->payment_address = $response->address_in;
+
             return $response->address_in;
         }
 
@@ -81,7 +103,7 @@ class CryptAPIHelper
     {
         if (empty($this->coin)) return null;
 
-        if(empty($value)) {
+        if (empty($value)) {
             $params = [
                 'address' => $this->payment_address,
                 'size' => $size,
@@ -95,6 +117,34 @@ class CryptAPIHelper
         }
 
         $response = CryptAPIHelper::_request($this->coin, 'qrcode', $params);
+
+        if ($response->status == 'success') {
+            return ['qr_code' => $response->qr_code, 'uri' => $response->payment_uri];
+        }
+
+        return null;
+    }
+
+    public static function get_static_qrcode($address, $coin, $value, $size = 300)
+    {
+        if (empty($address)) {
+            return null;
+        }
+
+        if (!empty($value)) {
+            $params = [
+                'address' => $address,
+                'value' => $value,
+                'size' => $size,
+            ];
+        } else {
+            $params = [
+                'address' => $address,
+                'size' => $size,
+            ];
+        }
+
+        $response = CryptAPIHelper::_request($coin, 'qrcode', $params);
 
         if ($response->status == 'success') {
             return ['qr_code' => $response->qr_code, 'uri' => $response->payment_uri];
@@ -178,34 +228,6 @@ class CryptAPIHelper
         return $params;
     }
 
-    public static function get_static_qrcode($address, $coin, $value, $size = 300)
-    {
-        if (empty($address)) {
-            return null;
-        }
-
-        if (!empty($value)) {
-            $params = [
-                'address' => $address,
-                'value' => $value,
-                'size' => $size,
-            ];
-        } else {
-            $params = [
-                'address' => $address,
-                'size' => $size,
-            ];
-        }
-
-        $response = CryptAPIHelper::_request($coin, 'qrcode', $params);
-
-        if ($response->status == 'success') {
-            return ['qr_code' => $response->qr_code, 'uri' => $response->payment_uri];
-        }
-
-        return null;
-    }
-
     public static function get_conversion($from, $to, $value, $disable_conversion)
     {
 
@@ -228,37 +250,6 @@ class CryptAPIHelper
         return null;
     }
 
-    public static function calc_order($history, $total, $total_fiat)
-    {
-        $already_paid = 0;
-        $already_paid_fiat = 0;
-        $remaining = $total;
-        $remaining_pending = $total;
-        $remaining_fiat = $total_fiat;
-
-        if (!empty($history)) {
-            foreach ($history as $uuid => $item) {
-                if ((int)$item['pending'] === 0) {
-                    $remaining = bcsub($remaining, $item['value_paid'], 18);
-                }
-
-                $remaining_pending = bcsub($remaining_pending, $item['value_paid'], 18);
-                $remaining_fiat = bcsub($remaining_fiat, $item['value_paid_fiat'], 18);
-
-                $already_paid = bcadd($already_paid, $item['value_paid'], 18);
-                $already_paid_fiat = bcadd($already_paid_fiat, $item['value_paid_fiat'], 18);
-            }
-        }
-
-        return [
-            'already_paid' => floatval($already_paid),
-            'already_paid_fiat' => floatval($already_paid_fiat),
-            'remaining' => floatval($remaining),
-            'remaining_pending' => floatval($remaining_pending),
-            'remaining_fiat' => floatval($remaining_fiat)
-        ];
-    }
-
     public static function get_estimate($coin)
     {
 
@@ -277,12 +268,65 @@ class CryptAPIHelper
         return null;
     }
 
+
+    public static function sig_fig($value, $digits)
+    {
+        if ($value == 0) {
+            $decimalPlaces = $digits - 1;
+        } elseif ($value < 0) {
+            $decimalPlaces = $digits - floor(log10($value * -1)) - 1;
+        } else {
+            $decimalPlaces = $digits - floor(log10($value)) - 1;
+        }
+
+        $answer = ($decimalPlaces > 0) ?
+            number_format($value, $decimalPlaces, '.', '') : round($value, $decimalPlaces);
+        return $answer;
+    }
+
+    public static function calc_order($history, $total, $total_fiat)
+    {
+        $already_paid = 0;
+        $already_paid_fiat = 0;
+        $remaining = $total;
+        $remaining_pending = $total;
+        $remaining_fiat = $total_fiat;
+
+        if (!empty($history)) {
+            foreach ($history as $uuid => $item) {
+                if ((int)$item['pending'] === 0) {
+                    $remaining = bcsub(CryptAPIHelper::sig_fig($remaining, 6), $item['value_paid'], 8);
+                }
+
+                $remaining_pending = bcsub(CryptAPIHelper::sig_fig($remaining_pending, 6), $item['value_paid'], 8);
+                $remaining_fiat = bcsub(CryptAPIHelper::sig_fig($remaining_fiat, 6), $item['value_paid_fiat'], 8);
+
+                $already_paid = bcadd(CryptAPIHelper::sig_fig($already_paid, 6), $item['value_paid'], 8);
+                $already_paid_fiat = bcadd(CryptAPIHelper::sig_fig($already_paid_fiat, 6), $item['value_paid_fiat'], 8);
+            }
+        }
+
+        return [
+            'already_paid' => floatval($already_paid),
+            'already_paid_fiat' => floatval($already_paid_fiat),
+            'remaining' => floatval($remaining),
+            'remaining_pending' => floatval($remaining_pending),
+            'remaining_fiat' => floatval($remaining_fiat)
+        ];
+    }
+
     private static function _request($coin, $endpoint, $params = [], $assoc = false)
     {
 
         $base_url = CryptAPIHelper::$base_url;
 
-        if (!empty($params)) $data = http_build_query($params);
+        if (!empty($params['apikey']) && $endpoint !== 'info') {
+            $base_url = CryptAPIHelper::$pro_url;
+        }
+
+        if (!empty($params)) {
+            $data = http_build_query($params);
+        }
 
         if (!empty($coin)) {
             $coin = str_replace('_', '/', $coin);
@@ -291,7 +335,9 @@ class CryptAPIHelper
             $url = "{$base_url}/{$endpoint}/";
         }
 
-        if (!empty($data)) $url .= "?{$data}";
+        if (!empty($data)) {
+            $url .= "?{$data}";
+        }
 
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_HEADER, 0);

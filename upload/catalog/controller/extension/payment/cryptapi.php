@@ -81,7 +81,9 @@ class ControllerExtensionPaymentCryptapi extends Controller
             $selected = $this->request->post['cryptapi_coin'];
             $address = $this->config->get('payment_cryptapi_cryptocurrencies_address_' . $selected);
 
-            if (!empty($address)) {
+            $apiKey = $this->config->get('payment_cryptapi_api_key');
+
+            if (!empty($address) || !empty($apiKey)) {
                 $nonce = $this->model_extension_payment_cryptapi->generateNonce();
 
                 require_once(DIR_SYSTEM . 'library/cryptapi.php');
@@ -103,7 +105,8 @@ class ControllerExtensionPaymentCryptapi extends Controller
                     $callbackUrl = $this->url->link('extension/payment/cryptapi/callback', 'order_id=' . $this->session->data['order_id'] . '&nonce=' . $nonce, true);
                     $callbackUrl = str_replace('&amp;', '&', $callbackUrl);
 
-                    $helper = new CryptAPIHelper($selected, $address, $callbackUrl, [], true);
+
+                    $helper = new CryptAPIHelper($selected, $address, $apiKey, $callbackUrl, [], true);
                     $addressIn = $helper->get_address();
 
                     $qrCodeDataValue = $helper->get_qrcode($cryptoTotal, $qr_code_size);
@@ -396,7 +399,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
                 $remaining = $calc['remaining'];
                 $remaining_pending = $calc['remaining_pending'];
-                $remaining_fiat = $calc['remaining_fiat'];
+                $already_paid = $calc['already_paid'];
 
                 if ($value_refresh !== 0 && $last_price_update + $value_refresh <= time() && !empty($last_price_update)) {
 
@@ -423,7 +426,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
                     $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_last_price_update', time());
                 }
 
-                if ($order_timeout !== 0 && (strtotime($order['date_added']) + $order_timeout) <= time() && $remaining_fiat >= floatval($metaData['cryptapi_total_fiat']) && (int)$metaData['cryptapi_cancelled'] === 0) {
+                if ($order_timeout !== 0 && (strtotime($order['date_added']) + $order_timeout) <= time() && $already_paid <=0 && (int)$metaData['cryptapi_cancelled'] === 0) {
                     $processing_state = 7;
                     $this->model_checkout_order->addOrderHistory($order['order_id'], $processing_state);
                 }
@@ -465,7 +468,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
             $history[$data['uuid']] = [
                 'timestamp' => time(),
-                'value_paid' => $paid,
+                'value_paid' => CryptAPIHelper::sig_fig($paid, 6),
                 'value_paid_fiat' => $fiat_conversion,
                 'pending' => $data['pending']
             ];

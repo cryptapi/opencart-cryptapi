@@ -35,6 +35,7 @@ $_['entry_status'] = 'Status';
 
 $_['branding'] = 'Show CryptAPI logo and credits below the QR code';
 
+$_['qrcode_default'] = 'Show QR Code';
 $_['qrcode'] = 'QR Code to show';
 $_['qrcode_size'] = 'QR Code size';
 $_['qrcode_without_ammount'] = 'Default Without Ammount';
@@ -69,8 +70,8 @@ $_['entry_sort_order'] = 'Sort order';
 $_['error_permission'] = 'Warning: You do not have permission to modify the CryptAPI payment module';
 
 // Help hints
-$_['help_cryptocurrencies'] = 'Select which coins do you wish to accept (Don\'t forget to paste your address in the respective field).';
-$_['help_cryptocurrency'] = 'Click the checkbox to enable ';
+$_['help_cryptocurrencies'] = 'If you are using CryptAPI Pro you can choose if setting the receiving addresses here bellow or in your CryptAPI Pro settings page.<br/>- In order to set the addresses on plugin settings, you need to select “Address Override” while creating the API key.<br/>- In order to set the addresses on CryptAPI Pro settings, you need to NOT select “Address Override” while creating the API key.';
+$_['help_cryptocurrency'] = 'Click the checkbox to enable the cryptocurrency';
 
 
 // Order page - payment tab
@@ -79,3 +80,7 @@ $_['text_payment_info'] = 'Payment information';
 $_['disable_conversion'] = 'Disable Conversion';
 $_['disable_conversion_warn_bold'] = 'Attention: This option will disable the price conversion for ALL cryptocurrencies!';
 $_['disable_conversion_warn'] = 'If you check this, pricing will not be converted from the currency of your shop to the cryptocurrency selected by the user, and users will be requested to pay the same value as shown on your shop, regardless of the cryptocurrency selected';
+
+
+$_['api_key'] = 'API Key';
+$_['api_key_info'] = "Insert here your CryptAPI Pro API Key. You can get one with CryptAPI Pro. Notice: If API permission 'Address Override' is not enabled you must set the address in the dashboard otherwise payments may fail.";
