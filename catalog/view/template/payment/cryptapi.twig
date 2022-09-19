@@ -1,0 +1,71 @@
+<form action="" method="POST" class="card mb-3" id="cryptapi-payment-form">
+    <div class="card-header">
+        <legend class="card-title border-bottom-0 pb-0">{{ title }}</legend>
+    </div>
+    <div class="card-body pb-2">
+        <fieldset id="payment">
+            <div class="form-group">
+                {% for ticker, coin in cryptocurrencies %}
+                    <div class="col-sm-12 mb-3 d-flex align-items-center">
+                        <input class="form-check-inline me-2" type="radio" name="cryptapi_coin" id="cryptapi_coin_{{ ticker }}" value="{{ ticker }}" {% if selected==ticker %}checked{% endif %}/>
+                        <img style="pointer-events: none !important;" width="24" class="img-fluid ms-1 me-2" src="{{ coin['logo'] }}" />
+                        <label class="form-check-label" for="cryptapi_coin_{{ ticker }}">Pay with {{ coin['name'] }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </fieldset>
+        <div class="mt-4">
+            <small>Powered by <a href="https://cryptapi.io" target="_blank">CryptAPI</a></small>
+        </div>
+    </div>
+</form>
+<div class="d-inline-block pt-2 pd-2 w-100 text-end">
+    <button type="button" id="button-confirm" class="btn btn-primary">{{ button_confirm }}</button>
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        {% if blockchain_fee or fee != '0' %}
+        let symbol_left = '{{ symbol_left }}';
+        let symbol_right = '{{ symbol_right }}';
+        let table = $('#checkout-confirm .table');
+        table.find('tfoot > tr:last-child').remove();
+        table.find('tfoot').append('<tr><td colspan="1" class="text-end"><strong>Fee</strong></td><td class="text-end">' + symbol_left + {{ cryptapi_fee }} +symbol_right + '</td></tr>')
+        table.find('tfoot').append('<tr><td colspan="1" class="text-end"><strong>{{ column_total }}</strong></td><td class="text-end">' + symbol_left + {{ total }} +symbol_right + '</td></tr>')
+
+        $('#cryptapi-payment-form').on('change', function () {
+            $.ajax({
+                type: "POST",
+                url: 'index.php?route=extension/cryptapi/payment/cryptapi|sel_crypto',
+                data: $(this).serialize(),
+                success: function (res) {
+                    $('#button-payment-method').trigger('click');
+                }
+            });
+        })
+        {% endif %}
+
+        $('#button-confirm').on('click', function () {
+            $.ajax({
+                url: 'index.php?route=extension/cryptapi/payment/cryptapi|confirm&language={{ language }}',
+                type: 'post',
+                data: $('#cryptapi-payment-form input:checked'),
+                dataType: 'json',
+                cache: false,
+                beforeSend: function () {
+                    $('#button-confirm').button('loading');
+                },
+                complete: function () {
+                    $('#button-confirm').button('reset');
+                },
+                success: function (json) {
+                    if (json['redirect']) {
+                        location = json['redirect'];
+                    }
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+                }
+            });
+        });
+    });
+</script>
