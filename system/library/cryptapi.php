@@ -1,5 +1,4 @@
 <?php
-namespace Opencart\Extension\CryptAPI\System\Library;
 class CryptAPIHelper
 {
     private static $base_url = "https://api.cryptapi.io";
@@ -180,7 +179,6 @@ class CryptAPIHelper
         return $coins;
     }
 
-
     public static function get_info($coin = null, $assoc = false)
     {
         $params = [];
@@ -220,9 +218,7 @@ class CryptAPIHelper
         }
 
         foreach ($params as &$val) {
-            if(is_string($val)) {
-                $val = trim($val);
-            }
+            $val = trim($val);
         }
 
         return $params;
@@ -284,16 +280,7 @@ class CryptAPIHelper
         return $answer;
     }
 
-    public static function base_url(): string
-    {
-        return sprintf(
-            "%s://%s",
-            $_SERVER['HTTPS'] ? 'https' : 'http',
-            $_SERVER['SERVER_NAME']
-        );
-    }
-
-    public static function calc_order($history, $total, $total_fiat): array
+    public static function calc_order($history, $total, $total_fiat)
     {
         $already_paid = 0;
         $already_paid_fiat = 0;

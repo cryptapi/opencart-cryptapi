@@ -6,7 +6,7 @@ Accept cryptocurrency payments on your OpenCart store
 ### Requirements:
 
 ```
-OpenCart >= 4.0
+OpenCart >= 3.0
 ```
 
 ### Description
@@ -94,7 +94,7 @@ For more info on our fees [click here](https://cryptapi.io/fees)
 
 ### Cronjob
 
-Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL ``YOUR-DOMAIN/index.php?route=extension/cryptapi/payment/cryptapi|cron``.
+Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL ``YOUR-DOMAIN/index.php?route=extension/payment/cryptapi/cron``.
 
 ### Frequently Asked Questions
 
