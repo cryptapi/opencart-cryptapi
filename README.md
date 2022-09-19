@@ -94,7 +94,7 @@ For more info on our fees [click here](https://cryptapi.io/fees)
 
 ### Cronjob
 
-Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL ``YOUR-DOMAIN/index.php?route=extension/payment/cryptapi/cron``.
+Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL ``YOUR-DOMAIN/index.php?route=extension/cryptapi/payment/cryptapi|cron``.
 
 ### Frequently Asked Questions
 
@@ -108,7 +108,7 @@ This depends on the cryptocurrency you're using. Bitcoin usually takes up to 11 
 
 #### Is there a minimum for a payment?
 
-Yes, the minimums change according to the chosen cryptocurrency and can be checked [here](https://cryptapi.io/get_started/#fees).
+Yes, the minimums change according to the chosen cryptocurrency and can be checked [here](https://cryptapi.io/cryptocurrencies).
 If the OpenCart order total is below the chosen cryptocurrency's minimum, an error is raised to the user.
 
 #### Where can I find more documentation on your service?
