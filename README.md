@@ -149,6 +149,7 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * Minor fixes
 
 #### 3.2
+* Support for OpenCart 4.0
 * Support for BlockBee
 * New e-mail once a order is done with a link for payment
 * New settings layout
