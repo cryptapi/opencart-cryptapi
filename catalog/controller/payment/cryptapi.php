@@ -571,7 +571,12 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
         $orderFetch = $this->model_checkout_order->getOrder($order_id);
         $order = $this->model_extension_cryptapi_payment_cryptapi->getOrder($order_id);
-        $orderObj = json_decode($order['response']);
+        
+        $orderObj = isset($order['response']) ? json_decode($order['response']) : '';
+
+        if(!$orderObj) {
+            return;
+        }
 
         if ((int)$orderObj->cryptapi_cancelled === 0 && isset($orderObj->cryptapi_payment_url) && (int)$orderFetch['order_status_id'] === 1) {
             $data['button_continue'] = 'Pay Order';
