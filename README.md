@@ -155,5 +155,8 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * New settings layout
 * Minor fixes
 
-== Upgrade Notice ==
+#### 3.2.1
+* Minor fixes
+
+### Upgrade Notice
 * No breaking changes

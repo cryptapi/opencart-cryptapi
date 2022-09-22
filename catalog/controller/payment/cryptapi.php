@@ -167,7 +167,7 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             $order_id = (int)($this->request->get['amp;order_id']);
         }
 
-        if (isset($order_id) && $order_id > 0) {
+        if (isset($order_id)) {
             $this->load->model('checkout/order');
             $order = $this->model_checkout_order->getOrder($order_id);
 
