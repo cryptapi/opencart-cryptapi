@@ -172,6 +172,9 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
     public function pay()
     {
+        $this->document->addScript('catalog/view/javascript/cryptapi/js/cryptapi_script.js');
+        $this->document->addStyle('catalog/view/javascript/cryptapi/css/cryptapi_style.css');
+
         // In case the extension is disabled, do nothing
         if (!$this->config->get('payment_cryptapi_status')) {
             $this->response->redirect($this->url->link('common/home', '', true));
@@ -549,7 +552,12 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
         $orderFetch = $this->model_checkout_order->getOrder($order_id);
         $order = $this->model_extension_payment_cryptapi->getOrder($order_id);
-        $orderObj = json_decode($order['response']);
+
+        $orderObj = isset($order['response']) ? json_decode($order['response']) : '';
+
+        if(!$orderObj) {
+            return;
+        }
 
         if ((int)$orderObj->cryptapi_cancelled === 0 && isset($orderObj->cryptapi_payment_url) && (int)$orderFetch['order_status_id'] === 1) {
             $data['button_continue'] = 'Pay Order';
