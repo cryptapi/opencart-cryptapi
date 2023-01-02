@@ -284,15 +284,6 @@ class CryptAPIHelper
         return $answer;
     }
 
-    public static function base_url(): string
-    {
-        return sprintf(
-            "%s://%s",
-            $_SERVER['HTTPS'] ? 'https' : 'http',
-            $_SERVER['SERVER_NAME']
-        );
-    }
-
     public static function calc_order($history, $total, $total_fiat): array
     {
         $already_paid = 0;

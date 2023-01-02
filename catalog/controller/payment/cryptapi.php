@@ -237,7 +237,7 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $cancel_timer = (int)$metaData['cryptapi_order_timestamp'] + (int)$this->config->get('payment_cryptapi_order_cancelation_timeout') - time();
 
         $params = [
-            'module_path' => \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::base_url() . '/extension/cryptapi/catalog/view/image/',
+            'module_path' => HTTP_SERVER . '/extension/cryptapi/catalog/view/image/',
             'header' => $this->load->controller('common/header'),
             'footer' => $this->load->controller('common/footer'),
             'currency_symbol_left' => $currencySymbolLeft,
@@ -251,7 +251,7 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             'qr_code' => $metaData['cryptapi_qrcode'],
             'qr_code_value' => $metaData['cryptapi_qrcode_value'],
             'show_branding' => $this->config->get('payment_cryptapi_branding'),
-            'branding_logo' => \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::base_url() . '/extension/cryptapi/catalog/view/image/payment.png',
+            'branding_logo' => HTTP_SERVER . '/extension/cryptapi/catalog/view/image/payment.png',
             'qr_code_setting' => $this->config->get('payment_cryptapi_qrcode'),
             'order_timestamp' => $order['total'],
             'order_cancelation_timeout' => $this->config->get('payment_cryptapi_order_cancelation_timeout'),
@@ -292,30 +292,37 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
         $nonce = $metaData['cryptapi_nonce'];
 
-        // Send the E-mail with the order URL
-        $mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'));
-        $mail->parameter = $this->config->get('config_mail_parameter');
-        $mail->smtp_hostname = $this->config->get('config_mail_smtp_hostname');
-        $mail->smtp_username = $this->config->get('config_mail_smtp_username');
-        $mail->smtp_password = html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8');
-        $mail->smtp_port = $this->config->get('config_mail_smtp_port');
-        $mail->smtp_timeout = $this->config->get('config_mail_smtp_timeout');
+        /**
+         * Tries sending an e-mail. Will fail if configuration is not set but won't throw an error.
+         */
+        try {
+            // Send the E-mail with the order URL
+            $mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'));
+            $mail->parameter = $this->config->get('config_mail_parameter');
+            $mail->smtp_hostname = $this->config->get('config_mail_smtp_hostname');
+            $mail->smtp_username = $this->config->get('config_mail_smtp_username');
+            $mail->smtp_password = html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8');
+            $mail->smtp_port = $this->config->get('config_mail_smtp_port');
+            $mail->smtp_timeout = $this->config->get('config_mail_smtp_timeout');
 
-        $subject = sprintf($this->language->get('order_subject'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
+            $subject = sprintf($this->language->get('order_subject'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
 
-        $data['order_greeting'] = sprintf($this->language->get('order_greeting'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
-        $data['order_url'] = $metaData['cryptapi_payment_url'];
-        $data['store'] = html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8');
-        $data['store_url'] = $order['store_url'];
+            $data['order_greeting'] = sprintf($this->language->get('order_greeting'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
+            $data['order_url'] = $metaData['cryptapi_payment_url'];
+            $data['store'] = html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8');
+            $data['store_url'] = $order['store_url'];
 
-        $html = $this->load->view('extension/cryptapi/payment/cryptapi_email', $data);
+            $html = $this->load->view('extension/cryptapi/payment/cryptapi_email', $data);
 
-        $mail->setTo($order['email']);
-        $mail->setFrom($this->config->get('config_email'));
-        $mail->setSender(html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8'));
-        $mail->setSubject(html_entity_decode($subject, ENT_QUOTES, 'UTF-8'));
-        $mail->setHtml($html);
-        $mail->send();
+            $mail->setTo($order['email']);
+            $mail->setFrom($this->config->get('config_email'));
+            $mail->setSender(html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8'));
+            $mail->setSubject(html_entity_decode($subject, ENT_QUOTES, 'UTF-8'));
+            $mail->setHtml($html);
+            $mail->send();
+        } catch (\Exception $exception) {
+            # don't do anything
+        }
 
         return $this->response->redirect($this->url->link('extension/cryptapi/payment/cryptapi|pay', 'order_id=' . $order['order_id'] . 'nonce=' . $nonce, true));
     }
@@ -418,9 +425,9 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $this->load->model('extension/cryptapi/payment/cryptapi');
         $this->response->addHeader('Content-Type: application/json');
 
-        $order_timeout = intval($this->config->get('payment_cryptapi_order_cancelation_timeout'));
-        $value_refresh = intval($this->config->get('payment_cryptapi_refresh_values'));
-        $qrcode_size = intval($this->config->get('payment_cryptapi_qrcode_size'));
+        $order_timeout = (int) $this->config->get('payment_cryptapi_order_cancelation_timeout');
+        $value_refresh = (int) $this->config->get('payment_cryptapi_refresh_values');
+        $qrcode_size = (int) $this->config->get('payment_cryptapi_qrcode_size');
 
         $response = $this->response->setOutput(json_encode(['status' => 'ok']));
 
@@ -447,7 +454,7 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
                 $history = json_decode($metaData['cryptapi_history'], true);
 
-                $min_tx = floatval($metaData['cryptapi_min']);
+                $min_tx = (float) $metaData['cryptapi_min'];
 
                 $calc = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::calc_order($history, $metaData['cryptapi_total'], floatval($metaData['cryptapi_total_fiat']));
 
@@ -455,7 +462,7 @@ class CryptAPI extends \Opencart\System\Engine\Controller
                 $remaining_pending = $calc['remaining_pending'];
                 $already_paid = $calc['already_paid'];
 
-                if ($value_refresh !== 0 && $last_price_update + $value_refresh <= time()) {
+                if ($value_refresh !== 0 && ($last_price_update + $value_refresh <= time())) {
                     if ($remaining === $remaining_pending) {
                         $cryptapi_coin = $metaData['cryptapi_currency'];
 
@@ -479,7 +486,7 @@ class CryptAPI extends \Opencart\System\Engine\Controller
                     $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_last_price_update', time());
                 }
 
-                if ($order_timeout !== 0 && (strtotime($order['date_added']) + $order_timeout) <= time() && $already_paid <= 0 && (int)$metaData['cryptapi_cancelled'] === 0) {
+                if ($order_timeout !== 0 && (strtotime($order['date_added']) + $order_timeout) <= time() && $already_paid <= 0) {
                     $this->model_checkout_order->addHistory($order['order_id'], 7);
                     $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_cancelled', '1');
                 }

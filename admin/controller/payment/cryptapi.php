@@ -254,25 +254,8 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
     public function install(): void
     {
-        if ($this->user->hasPermission('modify', 'extension/cryptapi')) {
-            $this->load->model('extension/cryptapi/payment/cryptapi');
+        $this->load->model('extension/cryptapi/payment/cryptapi');
 
-            // Create events
-            $this->load->model('setting/event');
-
-            if (!$this->model_setting_event->getEventByCode('cryptapi_order_info')) {
-                $this->model_setting_event->addEvent(['code' => 'cryptapi_order_info', 'description' => '', 'trigger' => 'admin/view/sale/order_info/before', 'action' => 'extension/cryptapi/payment/cryptapi|order_info', 'status' => 1, 'sort_order' => '1']);
-            }
-
-            if (!$this->model_setting_event->getEventByCode('cryptapi_order_button')) {
-                $this->model_setting_event->addEvent(['code' => 'cryptapi_order_button', 'description' => '', 'trigger' => 'catalog/view/account/order_info/before', 'action' => 'extension/cryptapi/payment/cryptapi|order_pay_button', 'status' => 1, 'sort_order' => '1']);
-            }
-
-            if (!$this->model_setting_event->getEventByCode('cryptapi_after_purchase')) {
-                $this->model_setting_event->addEvent(['code' => 'cryptapi_after_purchase', 'description' => '', 'trigger' => 'catalog/view/common/success/after', 'action' => 'extension/cryptapi/payment/cryptapi|after_purchase', 'status' => 1, 'sort_order' => '1']);
-            }
-
-            $this->model_extension_cryptapi_payment_cryptapi->install();
-        }
+        $this->model_extension_cryptapi_payment_cryptapi->install();
     }
 }
