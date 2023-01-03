@@ -35,7 +35,7 @@
 
         $('#cryptapi-payment-form').on('change', function () {
             var val = $('input[name="cryptapi_coin"]:checked').val();
-
+            $('#button-confirm').prop('disabled', true);
             $.ajax({
                 type: "POST",
                 url: "index.php?route=checkout/confirm",
@@ -46,6 +46,8 @@
                     $('#collapse-checkout-confirm > .panel-body')
                         .empty()
                         .append(response);
+
+                    $('#button-confirm').prop('disabled', false);
 
                     $("input[name=cryptapi_coin][value=" + val + "]").prop("checked", true);
                 }

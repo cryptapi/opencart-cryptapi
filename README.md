@@ -77,7 +77,7 @@ For more info on our fees [click here](https://cryptapi.io/fees)
 ### Installation
 
 1. Open your OpenCart admin
-2. Go to Extensions 
+2. Go to Extensions
 3. Upload the .zip file
 
 ### Configuration
@@ -90,7 +90,7 @@ For more info on our fees [click here](https://cryptapi.io/fees)
 6. Select which cryptocurrencies you wish to accept
 7. Input your addresses to the cryptocurrencies you selected. This is where your funds will be sent to, so make sure the addresses are correct.
 8. Save Changes
-9. All done! 
+9. All done!
 
 ### Cronjob
 
@@ -116,11 +116,11 @@ If the OpenCart order total is below the chosen cryptocurrency's minimum, an err
 You can find more documentation about our service on our [get started](https://cryptapi.io/get_started) page, our [technical documentation](https://docs.cryptapi.io/) page or our [resources](https://cryptapi.io/ecommerce/) page.
 If there's anything else you need that is not covered on those pages, please get in touch with us, we're here to help you!
 
-#### Where can I get support? 
+#### Where can I get support?
 
 The easiest and fastest way is via our live chat on our [website](https://cryptapi.io) or via our [contact form](https://cryptapi.io/contacts/).
 
-### Changelog 
+### Changelog
 
 #### 1.0
 * Initial release.
@@ -130,7 +130,7 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * Updated codebase
 * New API URL
 
-#### 3.0 
+#### 3.0
 * New settings and color schemes to fit dark mode
 * New settings to add CryptAPI's services fees to the checkout
 * New settings to add blockchain fees to the checkout
@@ -159,6 +159,9 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * Minor fixes
 
 #### 3.2.2
+* Minor fixes
+
+#### 3.2.3
 * Minor fixes
 
 == Upgrade Notice ==

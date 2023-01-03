@@ -283,30 +283,37 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
         $nonce = $metaData['cryptapi_nonce'];
 
-        // Send the E-mail with the order URL
-        $mail = new Mail($this->config->get('config_mail_engine'));
-        $mail->parameter = $this->config->get('config_mail_parameter');
-        $mail->smtp_hostname = $this->config->get('config_mail_smtp_hostname');
-        $mail->smtp_username = $this->config->get('config_mail_smtp_username');
-        $mail->smtp_password = html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8');
-        $mail->smtp_port = $this->config->get('config_mail_smtp_port');
-        $mail->smtp_timeout = $this->config->get('config_mail_smtp_timeout');
+        /**
+         * Tries sending an e-mail. Will fail if configuration is not set but won't throw an error.
+         */
+        try {
+            // Send the E-mail with the order URL
+            $mail = new Mail($this->config->get('config_mail_engine'));
+            $mail->parameter = $this->config->get('config_mail_parameter');
+            $mail->smtp_hostname = $this->config->get('config_mail_smtp_hostname');
+            $mail->smtp_username = $this->config->get('config_mail_smtp_username');
+            $mail->smtp_password = html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8');
+            $mail->smtp_port = $this->config->get('config_mail_smtp_port');
+            $mail->smtp_timeout = $this->config->get('config_mail_smtp_timeout');
 
-        $subject = sprintf($this->language->get('order_subject'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
+            $subject = sprintf($this->language->get('order_subject'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
 
-        $data['order_greeting'] = sprintf($this->language->get('order_greeting'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
-        $data['order_url'] = $metaData['cryptapi_payment_url'];
-        $data['store'] = html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8');
-        $data['store_url'] = $order['store_url'];
+            $data['order_greeting'] = sprintf($this->language->get('order_greeting'), $order['order_id'], strtoupper($metaData['cryptapi_currency']));
+            $data['order_url'] = $metaData['cryptapi_payment_url'];
+            $data['store'] = html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8');
+            $data['store_url'] = $order['store_url'];
 
-        $html = $this->load->view('extension/payment/cryptapi_email', $data);
+            $html = $this->load->view('extension/payment/cryptapi_email', $data);
 
-        $mail->setTo($order['email']);
-        $mail->setFrom($this->config->get('config_email'));
-        $mail->setSender(html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8'));
-        $mail->setSubject(html_entity_decode($subject, ENT_QUOTES, 'UTF-8'));
-        $mail->setHtml($html);
-        $mail->send();
+            $mail->setTo($order['email']);
+            $mail->setFrom($this->config->get('config_email'));
+            $mail->setSender(html_entity_decode($order['store_name'], ENT_QUOTES, 'UTF-8'));
+            $mail->setSubject(html_entity_decode($subject, ENT_QUOTES, 'UTF-8'));
+            $mail->setHtml($html);
+            $mail->send();
+        } catch (\Exception $exception) {
+            # don't do anything
+        }
 
         return $this->response->redirect($this->url->link('extension/payment/cryptapi/pay', 'order_id=' . $order['order_id'] . 'nonce=' . $nonce, true));
     }

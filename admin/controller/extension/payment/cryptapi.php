@@ -210,6 +210,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
     public function install()
     {
         $this->load->model('extension/payment/cryptapi');
+        // Create order database if doesn't exist
         $this->model_extension_payment_cryptapi->install();
 
         // Set Events
