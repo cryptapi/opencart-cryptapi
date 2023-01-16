@@ -38,6 +38,7 @@
                 url: 'index.php?route=extension/cryptapi/payment/cryptapi|sel_crypto',
                 data: $(this).serialize(),
                 success: function (res) {
+                    $('.alert-dismissible').remove();
                     $('#button-payment-method').trigger('click');
                 }
             });
@@ -58,9 +59,17 @@
                     $('#button-confirm').button('reset');
                 },
                 success: function (json) {
+                    $('.alert-dismissible').remove();  
                     if (json['redirect']) {
                         location = json['redirect'];
+                          } else if (json['error']) {
+                       
+                        if (json['error']['warning']) {
+                             $('#alert').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json['error']['warning'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+
                     }
+                }
+
                 },
                 error: function (xhr, ajaxOptions, thrownError) {
                     alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);

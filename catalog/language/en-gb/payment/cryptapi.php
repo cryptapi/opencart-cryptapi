@@ -13,6 +13,11 @@ $_['text_processing'] = 'Processing...';
 $_['text_paywith'] = 'Pay with';
 $_['text_notice'] = 'Notice';
 $_['text_moment'] = 'a moment';
+$_['error_payment']  = 'Payment error: %s!';
+$_['value_minim']  = 'Value too low, minimum is';
+$_['error_coin']  = 'No cryptocurrency selected for payment';
+$_['error_apikey']  = 'Insufficient store owner details for payment';
+$_['error_adress']  = 'This cryptocurrency cannot be used for payment at this time';
 
 $_['button_pay'] = 'Pay now';
 

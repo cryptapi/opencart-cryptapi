@@ -24,7 +24,7 @@ The CryptAPI extension enables your OpenCart store to get receive payments in cr
 * (ETH) Ethereum
 * (BCH) Bitcoin Cash
 * (LTC) Litecoin
-* (XMR) Monero
+* (MATIC) Polygon
 * (TRX) Tron
 * (BNB) Binance Coin
 * (USDT) USDT
@@ -163,6 +163,9 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 
 #### 3.2.3
 * Minor fixes
+
+#### 3.2.4
+* Minor fixes and improvements
 
 ### Upgrade Notice
 * No breaking changes
