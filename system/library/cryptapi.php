@@ -220,9 +220,7 @@ class CryptAPIHelper
         }
 
         foreach ($params as &$val) {
-            if(is_string($val)) {
-                $val = trim($val);
-            }
+            $val = is_string($val) ? trim($val) : null;
         }
 
         return $params;
@@ -271,17 +269,16 @@ class CryptAPIHelper
 
     public static function sig_fig($value, $digits)
     {
-        if ($value == 0) {
-            $decimalPlaces = $digits - 1;
-        } elseif ($value < 0) {
-            $decimalPlaces = $digits - floor(log10($value * -1)) - 1;
-        } else {
-            $decimalPlaces = $digits - floor(log10($value)) - 1;
+        $value = (string) $value;
+        if (strpos($value, '.') !== false) {
+            if ($value[0] != '-') {
+                return bcadd($value, '0.' . str_repeat('0', $digits) . '5', $digits);
+            }
+
+            return bcsub($value, '0.' . str_repeat('0', $digits) . '5', $digits);
         }
 
-        $answer = ($decimalPlaces > 0) ?
-            number_format($value, $decimalPlaces, '.', '') : round($value, $decimalPlaces);
-        return $answer;
+        return $value;
     }
 
     public static function calc_order($history, $total, $total_fiat): array
