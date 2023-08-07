@@ -25,7 +25,7 @@ The CryptAPI extension enables your OpenCart store to get receive payments in cr
 * (ETH) Ethereum
 * (BCH) Bitcoin Cash
 * (LTC) Litecoin
-* (XMR) Monero
+* (MATIC) Matic
 * (TRX) Tron
 * (BNB) Binance Coin
 * (USDT) USDT
@@ -33,7 +33,7 @@ The CryptAPI extension enables your OpenCart store to get receive payments in cr
 * (DOGE) Dogecoin
 
 
-among many others, for a full list of the supported cryptocurrencies and tokens, check [this page](https://cryptapi.io/pricing/).
+among many others, for a full list of the supported cryptocurrencies and tokens, check [this page](https://cryptapi.io/cryptocurrencies/).
 
 = Auto-value conversion =
 
@@ -114,7 +114,7 @@ If the OpenCart order total is below the chosen cryptocurrency's minimum, an err
 
 #### Where can I find more documentation on your service?
 
-You can find more documentation about our service on our [get started](https://cryptapi.io/get_started) page, our [technical documentation](https://docs.cryptapi.io/) page or our [resources](https://cryptapi.io/ecommerce/) page.
+You can find more documentation about our service on our [get started](https://cryptapi.io/get-started) page, our [technical documentation](https://docs.cryptapi.io/) page or our [resources](https://cryptapi.io/ecommerce/) page.
 If there's anything else you need that is not covered on those pages, please get in touch with us, we're here to help you!
 
 #### Where can I get support?
@@ -169,6 +169,9 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * Minor fixes and improvements
 
 #### 3.2.5
+* Minor fixes
+
+#### 3.2.6
 * Minor fixes
 
 ### Upgrade Notice
