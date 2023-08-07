@@ -32,7 +32,7 @@ The CryptAPI extension enables your OpenCart store to get receive payments in cr
 * (DOGE) Dogecoin
 
 
-among many others, for a full list of the supported cryptocurrencies and tokens, check [this page](https://cryptapi.io/pricing/).
+among many others, for a full list of the supported cryptocurrencies and tokens, check [this page](https://cryptapi.io/cryptocurrencies/).
 
 = Auto-value conversion =
 
@@ -168,6 +168,9 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * Minor fixes and improvements
 
 #### 3.2.5
+* Minor fixes
+
+#### 3.2.6
 * Minor fixes
 
 ### Upgrade Notice

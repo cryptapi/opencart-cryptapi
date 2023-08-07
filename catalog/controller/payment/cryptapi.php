@@ -524,6 +524,10 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
         $metaData = json_decode($this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order['order_id']), true);
 
+        if ($data["coin"] !== $metaData['cryptapi_currency']) {
+            die("*ok*");
+        }
+
         if ($this->isOrderPaid($order) || $data['nonce'] !== $metaData['cryptapi_nonce']) {
             die("*ok*");
         }
