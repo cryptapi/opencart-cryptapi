@@ -60,6 +60,9 @@ $_['forty_five_minutes'] = 'Every 45 Minutes';
 $_['sixty_minutes'] = 'Every 60 Minutes';
 
 $_['order_cancelation_timeout'] = 'Order cancelation timeout';
+$_['fifteen_minutes_cancellation'] = '15 Minutes';
+$_['thirty_minutes_cancellation'] = '30 Minutes';
+$_['forty_five_minutes_cancellation'] = '45 Minutes';
 $_['one_hour'] = '1 Hour';
 $_['six_hours'] = '6 Hours';
 $_['twelve_hours'] = '12 Hours';

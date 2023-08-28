@@ -11,7 +11,7 @@ OpenCart >= 4.0
 
 ### Description
 
-Accept payments in Bitcoin, Bitcoin Cash, Litecoin, Ethereum, Monero and IOTA directly to your crypto wallet, without any sign-ups or lengthy processes.
+Accept payments in Bitcoin, Bitcoin Cash, Litecoin, Ethereum, USDT and Matic directly to your crypto wallet, without any sign-ups or lengthy processes.
 All you need is to provide your crypto address.
 
 #### Allow users to pay with crypto directly on your store
@@ -172,6 +172,10 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 
 #### 3.2.6
 * Minor fixes
+
+#### 3.2.7
+* Add new choices for order cancellation.
+* Minor bugfixes
 
 ### Upgrade Notice
 * No breaking changes
