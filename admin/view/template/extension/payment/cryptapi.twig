@@ -428,6 +428,24 @@
                                         {% endif %}
                                 >{{ never }}
                                 </option>
+                                <option value="900"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '900' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ fifteen_minutes_cancellation }}
+                                </option>
+                                <option value="1800"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '1800' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ thirty_minutes_cancellation }}
+                                </option>
+                                <option value="2700"
+                                        {% if payment_cryptapi_order_cancelation_timeout == '2700' %}
+                                            selected="selected"
+                                        {% endif %}
+                                >{{ forty_five_minutes_cancellation }}
+                                </option>
                                 <option value="3600"
                                         {% if payment_cryptapi_order_cancelation_timeout is empty or payment_cryptapi_order_cancelation_timeout == '3600' %}
                                             selected="selected"
@@ -441,7 +459,7 @@
                                 >{{ six_hours }}
                                 </option>
                                 <option value="43200"
-                                        {% if payment_cryptapi_order_cancelation_timeout == '21600' %}
+                                        {% if payment_cryptapi_order_cancelation_timeout == '43200' %}
                                             selected="selected"
                                         {% endif %}
                                 >{{ twelve_hours }}
