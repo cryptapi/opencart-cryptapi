@@ -20,6 +20,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         {% endif %}
+        {% if currency_warning %}
+            <div class="alert alert-warning alert-dismissible"><i class="fas fa-exclamation-triangle"></i> {{ currency_warning }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endif %}
         <div class="alert alert-info" style="overflow: hidden;">
             <div class="row">
                 {{ text_cryptapi_image }}<br/>
@@ -311,10 +316,7 @@
                                             {% if payment_cryptapi_qrcode_default is empty or payment_cryptapi_qrcode_default != '0' %}
                                                 <option value="1" selected="selected">{{ text_enabled }}</option>
                                                 <option value="0">{{ text_disabled }}</option>
-                                            {% elseif payment_cryptapi_branding == 1 %}
-                                                <option value="1" selected="selected">{{ text_enabled }}</option>
-                                                <option value="0">{{ text_disabled }}</option>
-                                            {% elseif payment_cryptapi_branding == 0 %}
+                                            {% else %}
                                                 <option value="1">{{ text_enabled }}</option>
                                                 <option value="0" selected="selected">{{ text_disabled }}</option>
                                             {% endif %}
@@ -535,6 +537,23 @@
                                 </div>
                             </div>
                             <div class="row mb-3">
+                                <label class="col-sm-2 col-form-label" data-bs-toggle="tooltip" data-bs-placement="right" for="input-paid-statuses" title="{{ text_paid_order_statuses }}">{{ entry_paid_order_statuses }}</label>
+                                <div class="col-sm-10">
+                                    <div class="input-group">
+                                        <select name="payment_cryptapi_paid_order_status_ids[]" id="input-paid-statuses" class="form-select" multiple size="6">
+                                            {% for order_status in all_order_statuses %}
+                                                {% if order_status.order_status_id in payment_cryptapi_paid_order_status_ids %}
+                                                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                                                {% else %}
+                                                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <small class="text-muted form-text">{{ text_paid_order_statuses }}</small>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
                                 <label class="col-sm-2 col-form-label" for="input-sort-order">{{ entry_sort_order }}</label>
                                 <div class="col-sm-10">
                                     <div class="input-group">
@@ -549,7 +568,7 @@
                                 </label>
                                 <div class="col-sm-10">
                                     <div class="input-group">
-                                        <input class="form-control" type="text" id="cryptapi_cryptapi_api_key" name='payment_cryptapi_api_key'
+                                        <input class="form-control" type="password" autocomplete="off" id="cryptapi_cryptapi_api_key" name='payment_cryptapi_api_key'
                                                {% if payment_cryptapi_api_key is empty %}value="" {% else %}value="{{ payment_cryptapi_api_key }}"{% endif %}>
                                     </div>
                                     <small class="text-muted form-text">{{ api_key_info }}</small>

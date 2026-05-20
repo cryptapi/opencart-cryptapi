@@ -19,6 +19,14 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $this->load->model('extension/cryptapi/payment/cryptapi');
 
         if (($this->request->server['REQUEST_METHOD'] == 'POST')) {
+            $paid_statuses = [];
+            if (isset($_POST['payment_cryptapi_paid_order_status_ids'])) {
+                foreach ($_POST['payment_cryptapi_paid_order_status_ids'] as $value) {
+                    $paid_statuses[] = (int)$value;
+                }
+            }
+            $this->request->post['payment_cryptapi_paid_order_status_ids'] = $paid_statuses;
+
             $this->model_setting_setting->editSetting('payment_cryptapi', $this->request->post);
 
             $this->session->data['success'] = $this->language->get('text_success');
@@ -55,11 +63,35 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             }
         }
         $data['order_statuses'] = $orderStatusesFiltered;
+        $data['all_order_statuses'] = $orderStatuses;
+
+        if (isset($this->request->post['payment_cryptapi_paid_order_status_ids'])) {
+            $data['payment_cryptapi_paid_order_status_ids'] = $this->request->post['payment_cryptapi_paid_order_status_ids'];
+        } else {
+            $saved_paid = $this->config->get('payment_cryptapi_paid_order_status_ids');
+            $data['payment_cryptapi_paid_order_status_ids'] = is_array($saved_paid) ? $saved_paid : [2, 3, 15];
+        }
 
         if (isset($this->error['warning'])) {
             $data['error_warning'] = $this->error['warning'];
         } else {
             $data['error_warning'] = '';
+        }
+
+        $data['currency_warning'] = '';
+        $store_currency = $this->config->get('config_currency');
+        if (!empty($store_currency)) {
+            $supported = $this->cache->get('cryptapi.fiat_currencies');
+            if (empty($supported) || !is_array($supported)) {
+                $estimate = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_estimate('btc');
+                if (is_object($estimate)) {
+                    $supported = array_keys(get_object_vars($estimate));
+                    $this->cache->set('cryptapi.fiat_currencies', $supported);
+                }
+            }
+            if (is_array($supported) && !in_array($store_currency, $supported, true)) {
+                $data['currency_warning'] = sprintf($this->language->get('warning_currency_unsupported'), $store_currency);
+            }
         }
 
         $data['breadcrumbs'] = array();
@@ -257,5 +289,12 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $this->load->model('extension/cryptapi/payment/cryptapi');
 
         $this->model_extension_cryptapi_payment_cryptapi->install();
+    }
+
+    public function uninstall(): void
+    {
+        $this->load->model('extension/cryptapi/payment/cryptapi');
+
+        $this->model_extension_cryptapi_payment_cryptapi->uninstall();
     }
 }

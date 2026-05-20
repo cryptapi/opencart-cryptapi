@@ -34,6 +34,9 @@ $_['entry_cryptocurrencies'] = 'Accepted Cryptocurrencies';
 $_['entry_btc_address'] = $_['text_btc'] . ' Address';
 
 $_['entry_order_status'] = 'Order status';
+$_['warning_currency_unsupported'] = 'Your store currency (%s) is not in CryptAPI\'s supported fiat list. Blockchain fee estimates will fall back to USD. See https://docs.cryptapi.io for the current supported set.';
+$_['entry_paid_order_statuses'] = 'Paid order statuses';
+$_['text_paid_order_statuses']  = 'Select which order statuses count as "paid". Orders in these statuses will not be re-processed by callbacks or polled for further payments. Hold Ctrl/Cmd to select multiple.';
 $_['entry_status'] = 'Status';
 
 $_['branding'] = 'Show CryptAPI logo and credits below the QR code';

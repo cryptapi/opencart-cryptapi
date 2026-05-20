@@ -20,9 +20,56 @@ class CryptAPI extends \Opencart\System\Engine\Model {
 
         $this->db->query("
 			CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "cryptapi_order` (
-			  `order_id` int(11) NOT NULL,
-			  `response` TEXT
-			) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci");
+			  `order_id` INT(11) NOT NULL,
+			  `address_in` VARCHAR(255) NOT NULL DEFAULT '',
+			  `response` TEXT,
+			  PRIMARY KEY (`order_id`),
+			  UNIQUE KEY `idx_address_in` (`address_in`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        $this->migrate();
+    }
+
+    public function uninstall(): void
+    {
+        $this->load->model('setting/event');
+
+        foreach (['cryptapi_order_info', 'cryptapi_order_button', 'cryptapi_after_purchase'] as $code) {
+            $this->model_setting_event->deleteEventByCode($code);
+        }
+
+        // `oc_cryptapi_order` is intentionally not dropped — keeps order
+        // history available if the extension is reinstalled later.
+    }
+
+    private function migrate(): void
+    {
+        $columns = $this->db->query("SHOW COLUMNS FROM `" . DB_PREFIX . "cryptapi_order` LIKE 'address_in'");
+        if (!$columns->num_rows) {
+            $this->db->query("ALTER TABLE `" . DB_PREFIX . "cryptapi_order` ADD COLUMN `address_in` VARCHAR(255) NOT NULL DEFAULT ''");
+
+            $rows = $this->db->query("SELECT `order_id`, `response` FROM `" . DB_PREFIX . "cryptapi_order`");
+            foreach ($rows->rows as $row) {
+                $meta = json_decode($row['response'], true);
+                $address = $meta['cryptapi_address'] ?? '';
+                if ($address !== '') {
+                    $this->db->query("UPDATE `" . DB_PREFIX . "cryptapi_order` SET `address_in` = '" . $this->db->escape($address) . "' WHERE `order_id` = " . (int)$row['order_id']);
+                }
+            }
+        }
+
+        $keys = $this->db->query("SHOW KEYS FROM `" . DB_PREFIX . "cryptapi_order` WHERE Key_name = 'PRIMARY'");
+        if (!$keys->num_rows) {
+            $this->db->query("ALTER TABLE `" . DB_PREFIX . "cryptapi_order` ADD PRIMARY KEY (`order_id`)");
+        }
+
+        $unique = $this->db->query("SHOW KEYS FROM `" . DB_PREFIX . "cryptapi_order` WHERE Key_name = 'idx_address_in'");
+        if (!$unique->num_rows) {
+            $empties = $this->db->query("SELECT COUNT(*) AS n FROM `" . DB_PREFIX . "cryptapi_order` WHERE `address_in` = ''");
+            if ((int)$empties->row['n'] <= 1) {
+                $this->db->query("ALTER TABLE `" . DB_PREFIX . "cryptapi_order` ADD UNIQUE KEY `idx_address_in` (`address_in`)");
+            }
+        }
     }
 
     public function getOrder($order_id): array

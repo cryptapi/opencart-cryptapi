@@ -2,39 +2,39 @@
 namespace Opencart\Catalog\Model\Extension\CryptAPI\Payment;
 class CryptAPI extends \Opencart\System\Engine\Model
 {
-    public function getMethod(array $address): array
+    public function getMethods(array $address = []): array
     {
         $this->load->language('extension/cryptapi/payment/cryptapi');
 
-        if ($this->config->get('payment_cryptapi_status')) {
-            $query = $this->db->query("SELECT * FROM " . DB_PREFIX . "zone_to_geo_zone WHERE geo_zone_id = '" . (int)$this->config->get('payment_eway_standard_geo_zone_id') . "' AND country_id = '" . (int)$address['country_id'] . "' AND (zone_id = '" . (int)$address['zone_id'] . "' OR zone_id = '0')");
-            if (!$this->config->get('payment_cryptapi_standard_geo_zone_id')) {
-                $status = true;
-            } elseif ($query->num_rows) {
-                $status = true;
-            } else {
-                $status = false;
+        if (!$this->config->get('payment_cryptapi_status')) {
+            return [];
+        }
+
+        $geo_zone_id = (int)$this->config->get('payment_cryptapi_standard_geo_zone_id');
+        if ($geo_zone_id > 0) {
+            $query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "zone_to_geo_zone` WHERE `geo_zone_id` = '" . $geo_zone_id . "' AND `country_id` = '" . (int)($address['country_id'] ?? 0) . "' AND (`zone_id` = '" . (int)($address['zone_id'] ?? 0) . "' OR `zone_id` = '0')");
+            if (!$query->num_rows) {
+                return [];
             }
-        } else {
-            $status = false;
         }
 
-        if ($status) {
-            $status = $this->validateCurrencies();
+        if (!$this->validateCurrencies()) {
+            return [];
         }
 
-        $method_data = array();
+        $name = $this->config->get('payment_cryptapi_title') ?: $this->language->get('heading_title');
 
-        if ($status) {
-            $method_data = array(
-                'code' => 'cryptapi',
-                'title' => $this->config->get('payment_cryptapi_title'),
-                'terms' => 'cryptocurrency',
-                'sort_order' => $this->config->get('payment_cryptapi_sort_order')
-            );
-        }
-
-        return $method_data;
+        return [
+            'code'       => 'cryptapi',
+            'name'       => $name,
+            'option'     => [
+                'cryptapi' => [
+                    'code' => 'cryptapi.cryptapi',
+                    'name' => $name,
+                ],
+            ],
+            'sort_order' => $this->config->get('payment_cryptapi_sort_order'),
+        ];
     }
 
     public function validateCurrencies()
@@ -44,7 +44,7 @@ class CryptAPI extends \Opencart\System\Engine\Model
         $cryptocurrencies = array();
 
         foreach ($this->config->get('payment_cryptapi_cryptocurrencies') as $selected) {
-            foreach (json_decode(str_replace("&quot;", '"', $this->config->get('payment_cryptapi_cryptocurrencies_array_cache')), true) as $token => $coin) {
+            foreach (json_decode(html_entity_decode($this->config->get('payment_cryptapi_cryptocurrencies_array_cache'), ENT_QUOTES | ENT_HTML5, 'UTF-8'), true) as $token => $coin) {
                 if ($selected === $token) {
                     $cryptocurrencies += [
                         $token => $coin,
@@ -66,18 +66,6 @@ class CryptAPI extends \Opencart\System\Engine\Model
         return $status;
     }
 
-    public function generateNonce($len = 32)
-    {
-        $data = str_split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-
-        $nonce = [];
-        for ($i = 0; $i < $len; $i++) {
-            $nonce[] = $data[mt_rand(0, sizeof($data) - 1)];
-        }
-
-        return implode('', $nonce);
-    }
-
     public function getOrder($order_id): array
     {
         $qry = $this->db->query("SELECT * FROM `" . DB_PREFIX . "cryptapi_order` WHERE `order_id` = '" . (int)$order_id . "' LIMIT 1");
@@ -92,10 +80,15 @@ class CryptAPI extends \Opencart\System\Engine\Model
 
     public function getOrders()
     {
-        $qry = $this->db->query("SELECT * FROM `" . DB_PREFIX . "order` INNER JOIN `" . DB_PREFIX . "order_history` WHERE `" . DB_PREFIX . "order`.order_id=`" . DB_PREFIX . "order_history`.order_id AND `" . DB_PREFIX . "order`.payment_code ='cryptapi' AND `" . DB_PREFIX . "order`.order_status_id=1");
+        // OC 4.x: `payment_method` is JSON-encoded; filter on the serialized
+        // form (PHP's json_encode never inserts spaces, so the match is exact).
+        // `age_seconds` is computed server-side so cron timeout math is TZ-safe.
+        $qry = $this->db->query("SELECT *, (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(`date_added`)) AS `age_seconds`
+            FROM `" . DB_PREFIX . "order`
+            WHERE `payment_method` LIKE '%\"code\":\"cryptapi.cryptapi\"%' AND `order_status_id` = 1");
 
         if ($qry->num_rows) {
-            return $orders = $qry->rows;
+            return $qry->rows;
         } else {
             return false;
         }
@@ -115,7 +108,25 @@ class CryptAPI extends \Opencart\System\Engine\Model
 
     public function addPaymentData($order_id, $response)
     {
-        $this->db->query("INSERT INTO `" . DB_PREFIX . "cryptapi_order` SET `order_id` = '" . (int)$order_id . "',  `response` = '" . $this->db->escape($response) . "'");
+        $meta = json_decode($response, true);
+        $address_in = $meta['cryptapi_address'] ?? '';
+
+        $this->db->query("INSERT INTO `" . DB_PREFIX . "cryptapi_order` SET
+            `order_id` = '" . (int)$order_id . "',
+            `address_in` = '" . $this->db->escape($address_in) . "',
+            `response` = '" . $this->db->escape($response) . "'
+            ON DUPLICATE KEY UPDATE
+            `address_in` = VALUES(`address_in`),
+            `response` = VALUES(`response`)");
+    }
+
+    public function getOrderByAddress($address_in): array
+    {
+        if ($address_in === '') {
+            return [];
+        }
+        $qry = $this->db->query("SELECT * FROM `" . DB_PREFIX . "cryptapi_order` WHERE `address_in` = '" . $this->db->escape($address_in) . "' LIMIT 1");
+        return $qry->num_rows ? $qry->row : [];
     }
 
     public function updatePaymentData($order_id, $param, $value)
