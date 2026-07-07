@@ -94,7 +94,13 @@ For more info on our fees [click here](https://cryptapi.io/fees)
 
 ### Cronjob
 
-Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL ``YOUR-DOMAIN/index.php?route=extension/cryptapi/payment/cryptapi|cron``.
+Some features require a cronjob to work. You need to create one in your hosting that runs every 1 minute. It should call this URL:
+
+```
+https://YOUR-DOMAIN/index.php?route=extension/cryptapi/payment/cryptapi|cron&secret=YOUR_CRON_SECRET
+```
+
+Over HTTP from a non-loopback host (or from any host behind a reverse proxy) a matching `payment_cryptapi_cron_secret` (set in the extension settings) is required — append it as `&secret=YOUR_CRON_SECRET`. CLI (`php index.php ...`) and direct-loopback-without-proxy cron are exempt and need no secret.
 
 ### Frequently Asked Questions
 
@@ -183,6 +189,9 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * New admin warning for unsupported store currencies.
 * Various bugfixes and improvements.
 * Added translations
+
+#### 3.4.0
+* Bugfixes and security improvements
 
 ### Upgrade Notice
 * No breaking changes

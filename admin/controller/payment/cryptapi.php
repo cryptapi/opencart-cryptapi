@@ -154,6 +154,13 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             $data['payment_cryptapi_api_key'] = $this->config->get('payment_cryptapi_api_key');
         }
 
+        // Cron secret read-back (POST handler already persists it via editSetting).
+        if (isset($this->request->post['payment_cryptapi_cron_secret'])) {
+            $data['payment_cryptapi_cron_secret'] = $this->request->post['payment_cryptapi_cron_secret'];
+        } else {
+            $data['payment_cryptapi_cron_secret'] = $this->config->get('payment_cryptapi_cron_secret');
+        }
+
         if (isset($this->request->post['payment_cryptapi_standard_geo_zone_id'])) {
             $data['payment_cryptapi_standard_geo_zone_id'] = $this->request->post['payment_cryptapi_standard_geo_zone_id'];
         } else {
@@ -244,43 +251,59 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
     public function order_info(&$route, &$data, &$output)
     {
-        $order_id = $this->request->get['order_id'];
+        $order_id = (int)($this->request->get['order_id'] ?? 0);
         $this->load->model('extension/cryptapi/payment/cryptapi');
         $order = $this->model_extension_cryptapi_payment_cryptapi->getOrder($order_id);
-        if ($order) {
-            $metaData = $order['response'];
+        if (!$order) { return; }
 
-            if (!empty($metaData)) {
-                $metaData = json_decode($metaData, true);
-                $fields = '';
-                foreach ($metaData as $key => $val) {
-                    if ($key === 'cryptapi_qrcode_value' || $key === 'cryptapi_qrcode') {
-                        $fields .= '<tr><td>' . $key . '</td><td style="line-break: anywhere"><img width="100" class="img-fluid" src="data:image/png;base64,' . $val . '"/></td></tr>';
-                    } else if ($key === 'cryptapi_history') {
-                        $history = json_decode($val);
-                        $historyObj = '<table class="table table-bordered">';
-                        foreach ($history as $h_key => $h_val) {
-                            $historyObj .= '<tr><td colspan="2"><strong>UUID:</strong> ' . $h_key . '</td>';
+        $metaData = $order['response'];
+        if (empty($metaData)) { return; }
+        $metaData = json_decode($metaData, true);
+        if (!is_array($metaData)) { return; }
+
+        // Escape every dynamic segment before concatenating into admin HTML.
+        $esc = static function ($v): string {
+            if (!is_scalar($v)) { $v = json_encode($v); }
+            return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+        };
+        $is_b64 = static function ($v): bool {
+            return is_string($v) && $v !== '' && (bool)preg_match('#^[A-Za-z0-9+/=\r\n]+$#', $v) && base64_decode($v, true) !== false;
+        };
+        // Never render per-order secrets in admin (nonce/token are secrets; callback_url embeds &nonce=).
+        $skip = ['cryptapi_nonce' => true, 'cryptapi_token' => true, 'cryptapi_callback_url' => true];
+
+        $fields = '';
+        foreach ($metaData as $key => $val) {
+            if (isset($skip[$key])) { continue; }
+            if ($key === 'cryptapi_qrcode_value' || $key === 'cryptapi_qrcode') {
+                $img = $is_b64($val)
+                    ? '<img width="100" class="img-fluid" src="data:image/png;base64,' . $esc($val) . '"/>'
+                    : '(invalid image data)';
+                $fields .= '<tr><td>' . $esc($key) . '</td><td style="line-break: anywhere">' . $img . '</td></tr>';
+            } elseif ($key === 'cryptapi_history') {
+                $history = json_decode($val, true);
+                $historyObj = '<table class="table table-bordered">';
+                if (is_array($history)) {
+                    foreach ($history as $h_key => $h_val) {
+                        $historyObj .= '<tr><td colspan="2"><strong>UUID:</strong> ' . $esc($h_key) . '</td></tr>';
+                        if (is_array($h_val)) {
                             foreach ($h_val as $hrow_key => $hrow_value) {
-                                $historyObj .= '<tr><td>' . $hrow_key . '</td><td>' . $hrow_value . '</td>';
+                                $historyObj .= '<tr><td>' . $esc($hrow_key) . '</td><td>' . $esc($hrow_value) . '</td></tr>';
                             }
-                            $historyObj .= '</tr>';
                         }
-                        $historyObj .= '</table>';
-                        $fields .= '<tr><td>' . $key . '</td><td>' . $historyObj . '</td></tr>';
-
-                    } else if ($key === 'cryptapi_last_price_update' || $key === 'cryptapi_order_timestamp') {
-                        $fields .= '<tr><td>' . $key . '</td><td style="line-break: anywhere">' . date('d-m-Y H:i:s', (int)$val) . '</td></tr>';
-
-                    } else {
-                        $fields .= '<tr><td>' . $key . '</td><td style="line-break: anywhere">' . $val . '</td></tr>';
                     }
                 }
-
-                if ($data['tabs'][0]['code'] === 'cryptapi') {
-                    $data['tabs'][0]['content'] = '<table style="font-size: 13px;" class="table table-bordered">' . $fields . '<table>';
-                }
+                $historyObj .= '</table>';
+                $fields .= '<tr><td>' . $esc($key) . '</td><td>' . $historyObj . '</td></tr>';
+            } elseif ($key === 'cryptapi_last_price_update' || $key === 'cryptapi_order_timestamp') {
+                $fields .= '<tr><td>' . $esc($key) . '</td><td style="line-break: anywhere">' . $esc(date('d-m-Y H:i:s', (int)$val)) . '</td></tr>';
+            } else {
+                $fields .= '<tr><td>' . $esc($key) . '</td><td style="line-break: anywhere">' . $esc($val) . '</td></tr>';
             }
+        }
+
+        if (isset($data['tabs'][0]['code']) && $data['tabs'][0]['code'] === 'cryptapi') {
+            $data['tabs'][0]['content'] = '<table style="font-size: 13px;" class="table table-bordered">' . $fields . '</table>';
         }
     }
 

@@ -91,8 +91,19 @@ function check_status(ajax_url) {
             if (jQuery('.ca_time_refresh')[0]) {
                 var timer = jQuery('.ca_time_seconds_count');
 
-                if (timer.attr('data-seconds') <= 0) {
-                    timer.attr('data-seconds', data.counter);
+                // The server counter is the source of truth for "seconds until the
+                // next rate refresh". Re-sync the local countdown to it when it has
+                // expired OR drifted by more than the poll interval, so a refresh
+                // (counter jumps back to the full interval) is reflected immediately
+                // and the timer can't latch a stale near-zero value and loop.
+                var serverCounter = parseInt(data.counter, 10);
+                if (isNaN(serverCounter) || serverCounter < 0) serverCounter = 0;
+
+                var localSeconds = parseInt(timer.attr('data-seconds'), 10);
+                if (isNaN(localSeconds)) localSeconds = 0;
+
+                if (localSeconds <= 0 || Math.abs(localSeconds - serverCounter) > 3) {
+                    timer.attr('data-seconds', serverCounter);
                 }
             }
         });

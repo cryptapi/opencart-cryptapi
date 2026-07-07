@@ -129,15 +129,65 @@ class CryptAPI extends \Opencart\System\Engine\Model
         return $qry->num_rows ? $qry->row : [];
     }
 
-    public function updatePaymentData($order_id, $param, $value)
+    // Atomic read-modify-write under an InnoDB row lock.
+    public function updatePaymentData($order_id, $param, $value): void
     {
-        $metaData = $this->getPaymentData($order_id);
-        if (!empty($metaData)) {
-            $metaData = json_decode($metaData, true);
-            $metaData[$param] = $value;
-            $paymentData = json_encode($metaData);
-            $this->db->query("UPDATE " . DB_PREFIX . "cryptapi_order SET response = '" . $this->db->escape($paymentData) . "' WHERE order_id = '" . (int)$order_id . "'");
+        $order_id = (int)$order_id;
+        try {
+            $this->db->query("START TRANSACTION");
+            $row = $this->db->query("SELECT `response` FROM `" . DB_PREFIX . "cryptapi_order` WHERE `order_id` = '" . $order_id . "' FOR UPDATE");
+            if ($row->num_rows) {
+                $metaData = json_decode($row->row['response'], true);
+                if (!is_array($metaData)) { $metaData = []; }
+                $metaData[$param] = $value;
+                $this->db->query("UPDATE `" . DB_PREFIX . "cryptapi_order` SET `response` = '" . $this->db->escape(json_encode($metaData)) . "' WHERE `order_id` = '" . $order_id . "'");
+            }
+            $this->db->query("COMMIT");
+        } catch (\Throwable $e) {
+            $this->db->query("ROLLBACK");
         }
+    }
+
+    // Atomically merge one payment (keyed by $uuid) into cryptapi_history.
+    public function addHistoryEntry($order_id, string $uuid, array $entry): void
+    {
+        if ($uuid === '') { return; }
+        $order_id = (int)$order_id;
+        try {
+            $this->db->query("START TRANSACTION");
+            $row = $this->db->query("SELECT `response` FROM `" . DB_PREFIX . "cryptapi_order` WHERE `order_id` = '" . $order_id . "' FOR UPDATE");
+            if ($row->num_rows) {
+                $metaData = json_decode($row->row['response'], true);
+                if (!is_array($metaData)) { $metaData = []; }
+                $history = json_decode($metaData['cryptapi_history'] ?? '[]', true);
+                if (!is_array($history)) { $history = []; }
+                if (empty($history[$uuid])) {
+                    $history[$uuid] = $entry;                                   // value_paid locked
+                } else {
+                    $history[$uuid]['pending'] = $entry['pending'] ?? ($history[$uuid]['pending'] ?? 1);
+                }
+                $metaData['cryptapi_history'] = json_encode($history);
+                $this->db->query("UPDATE `" . DB_PREFIX . "cryptapi_order` SET `response` = '" . $this->db->escape(json_encode($metaData)) . "' WHERE `order_id` = '" . $order_id . "'");
+            }
+            $this->db->query("COMMIT");
+        } catch (\Throwable $e) {
+            $this->db->query("ROLLBACK");
+        }
+    }
+
+    // Single-statement atomic compare-and-set of cryptapi_paid; true exactly once.
+    public function claimPaidTransition($order_id): bool
+    {
+        $order_id = (int)$order_id;
+        // Requires MariaDB 10.2+/MySQL 5.7+ (JSON funcs); target ships MariaDB 10.6.
+        $this->db->query(
+            "UPDATE `" . DB_PREFIX . "cryptapi_order`
+                SET `response` = JSON_SET(`response`, '$.cryptapi_paid', '1')
+              WHERE `order_id` = '" . $order_id . "'
+                AND JSON_VALID(`response`)
+                AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(`response`, '$.cryptapi_paid')), '0') <> '1'"
+        );
+        return $this->db->countAffected() === 1;
     }
 
     public function deletePaymentData($order_id, $param)

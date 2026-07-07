@@ -1,0 +1,3 @@
+<FilesMatch "\.(php|yml|yaml|md|json|sh|Dockerfile)$">
+  Require all denied
+</FilesMatch>

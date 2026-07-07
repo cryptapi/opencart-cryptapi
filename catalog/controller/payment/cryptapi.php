@@ -83,7 +83,131 @@ class CryptAPI extends \Opencart\System\Engine\Controller
     {
         $this->load->model('extension/cryptapi/payment/cryptapi');
 
-        $this->session->data['cryptapi_selected'] = $_POST['cryptapi_coin'];
+        // Only accept a coin present in the configured allow-list.
+        $selected = (string)($this->request->post['cryptapi_coin'] ?? '');
+        $allowed  = $this->config->get('payment_cryptapi_cryptocurrencies');
+        if (is_array($allowed) && in_array($selected, $allowed, true)) {
+            $this->session->data['cryptapi_selected'] = $selected;
+        }
+    }
+
+    // Bind pay()/status() visibility to the requester. Self-sufficient —
+    // loads its own payment model so it is safe to call before the caller does.
+    private function authorizeOrderAccess(array $order): bool
+    {
+        $order_id = (int)($order['order_id'] ?? 0);
+        if ($order_id <= 0) {
+            return false;
+        }
+        $this->load->model('extension/cryptapi/payment/cryptapi');
+
+        // (a) same-session owner: confirm->pay redirect + live pay-page polling.
+        if ((int)($this->session->data['order_id'] ?? 0) === $order_id) {
+            return true;
+        }
+        // (a') logged-in customer owns the order. In OC4 $this->customer is a
+        // registry magic-property, so isset() is unreliable — call isLogged() directly.
+        $customer_id = (int)($order['customer_id'] ?? 0);
+        if ($customer_id > 0 && $this->customer->isLogged() && (int)$this->customer->getId() === $customer_id) {
+            return true;
+        }
+        // (b) per-order access token: guest checkout / email link / account button / new session.
+        $token = (string)($this->request->get['token'] ?? '');
+        if ($token !== '') {
+            $meta = json_decode((string)$this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order_id), true);
+            $stored = is_array($meta) ? (string)($meta['cryptapi_token'] ?? '') : '';
+            if ($stored !== '' && hash_equals($stored, $token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Gate the public |cron route — CLI always; configured secret always;
+    // loopback only when the request did NOT arrive through a proxy.
+    private function isCronAuthorized(): bool
+    {
+        if (PHP_SAPI === 'cli' || php_sapi_name() === 'cli') {
+            return true;
+        }
+        // Configured secret works everywhere (including behind proxies).
+        $secret = (string)$this->config->get('payment_cryptapi_cron_secret');
+        if ($secret !== '') {
+            $provided = (string)($this->request->get['secret'] ?? '');
+            if ($provided !== '' && hash_equals($secret, $provided)) {
+                return true;
+            }
+        }
+        // Trust loopback ONLY when the request did NOT arrive through a proxy.
+        // Behind a same-host reverse proxy REMOTE_ADDR is loopback for ALL external
+        // traffic, so require the absence of forwarding headers.
+        $behind_proxy = !empty($_SERVER['HTTP_X_FORWARDED_FOR'])
+            || !empty($_SERVER['HTTP_X_FORWARDED_HOST'])
+            || !empty($_SERVER['HTTP_X_REAL_IP'])
+            || !empty($_SERVER['HTTP_FORWARDED']);
+        $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+        if (!$behind_proxy && in_array($remote, ['127.0.0.1', '::1', '::ffff:127.0.0.1'], true)) {
+            return true;
+        }
+        return false;
+    }
+
+    // Extracted per-order refresh/cancel (the old cron loop body) with a positive-total guard.
+    private function refreshOrder(array $order): void
+    {
+        $order_timeout = (int)$this->config->get('payment_cryptapi_order_cancelation_timeout');
+        $value_refresh = (int)$this->config->get('payment_cryptapi_refresh_values');
+        $qrcode_size   = (int)$this->config->get('payment_cryptapi_qrcode_size');
+        $lib           = '\\Opencart\\Extension\\CryptAPI\\System\\Library\\CryptAPIHelper';
+
+        if ($order_timeout === 0 && $value_refresh === 0) {
+            return;
+        }
+
+        $order_id = (int)$order['order_id'];
+        $currency = $order['currency_code'];
+        $metaData = json_decode($this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order_id), true);
+        if (empty($metaData['cryptapi_last_price_update'])) {
+            return;
+        }
+
+        $last_price_update = $metaData['cryptapi_last_price_update'];
+        $history = json_decode($metaData['cryptapi_history'], true) ?: [];
+        $min_tx  = floatval($metaData['cryptapi_min']);
+
+        $calc = $lib::calc_order($history, $metaData['cryptapi_total'], floatval($metaData['cryptapi_total_fiat']));
+        $remaining         = $calc['remaining'];
+        $remaining_pending = $calc['remaining_pending'];
+        $already_paid      = $calc['already_paid'];
+
+        if ($value_refresh !== 0 && $last_price_update + $value_refresh <= time()) {
+            if ($remaining === $remaining_pending) {
+                $cryptapi_coin = $metaData['cryptapi_currency'];
+                $crypto_total  = $lib::get_conversion($currency, $cryptapi_coin, $metaData['cryptapi_total_fiat'], $this->config->get('payment_cryptapi_disable_conversion'));
+
+                // Never persist a null/non-positive re-priced total; keep prior good value.
+                if ($lib::is_positive_number($crypto_total)) {
+                    $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_total', $crypto_total);
+                    $calc_cron = $lib::calc_order($history, $crypto_total, $metaData['cryptapi_total_fiat']);
+                    $crypto_remaining_total = $calc_cron['remaining_pending'];
+                    if ($remaining_pending <= $min_tx && $remaining_pending > 0) {
+                        $qr = $lib::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $min_tx, $qrcode_size);
+                    } else {
+                        $qr = $lib::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $crypto_remaining_total, $qrcode_size);
+                    }
+                    if (is_array($qr) && isset($qr['qr_code'])) {
+                        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_qrcode_value', $qr['qr_code']);
+                    }
+                }
+            }
+            $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_last_price_update', time());
+        }
+
+        $age_seconds = isset($order['age_seconds']) ? (int)$order['age_seconds'] : (time() - strtotime($order['date_added']));
+        if ($order_timeout !== 0 && $age_seconds >= $order_timeout && $already_paid <= 0) {
+            $this->model_checkout_order->addHistory($order_id, 7);
+            $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_cancelled', '1');
+        }
     }
 
     public function confirm()
@@ -91,60 +215,135 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         // Library
         $this->load->language('extension/cryptapi/payment/cryptapi');
         require(DIR_EXTENSION . 'cryptapi/system/library/cryptapi.php');
+        $lib = '\\Opencart\\Extension\\CryptAPI\\System\\Library\\CryptAPIHelper';
 
-        $json = array();
+        $json = [];
         $err_coin = '';
 
-        if ($this->config->get('payment_cryptapi_status')) {
-            $this->load->model('checkout/order');
-            $this->load->model('extension/cryptapi/payment/cryptapi');
+        if (!$this->config->get('payment_cryptapi_status')) {
+            $this->response->addHeader('Content-Type: application/json');
+            $this->response->setOutput(json_encode($json));
+            return;
+        }
 
-            $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-            $cryptoFee = empty($this->session->data['cryptapi_fee']) ? 0 : $this->session->data['cryptapi_fee'];
-            $total = $this->currency->format($order_info['total'] + $cryptoFee, $order_info['currency_code'], 1.00000, false);
-            $apiKey = $this->config->get('payment_cryptapi_api_key');
-            if (empty($this->request->post['cryptapi_coin'])) {
+        $this->load->model('checkout/order');
+        $this->load->model('extension/cryptapi/payment/cryptapi');
+
+        $order_id = (int)($this->session->data['order_id'] ?? 0);
+        $order_info = $this->model_checkout_order->getOrder($order_id);
+        if (empty($order_info)) {
+            $json['error']['warning'] = sprintf($this->language->get('error_payment'), $this->language->get('error_coin'));
+            $this->response->addHeader('Content-Type: application/json');
+            $this->response->setOutput(json_encode($json));
+            return;
+        }
+
+        // Idempotency: never clobber a paid / partially-paid order.
+        $prevAddresses = [];
+        $existingRaw = $this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order_id);
+        if (!empty($existingRaw)) {
+            $em   = json_decode($existingRaw, true) ?: [];
+            $hist = json_decode($em['cryptapi_history'] ?? '[]', true) ?: [];
+            $alreadyPaid = $this->isOrderPaid($order_info) || (!empty($em['cryptapi_paid']) && (string)$em['cryptapi_paid'] === '1');
+            $hasPayments = is_array($hist) && count($hist) > 0;
+            if ($alreadyPaid || $hasPayments) {
+                $redir = $em['cryptapi_payment_url']
+                    ?? $this->url->link('extension/cryptapi/payment/cryptapi|pay', 'order_id=' . $order_id . '&token=' . ($em['cryptapi_token'] ?? ''), true);
+                $json['redirect'] = str_replace('&amp;', '&', $redir);
+                $this->response->addHeader('Content-Type: application/json');
+                $this->response->setOutput(json_encode($json));
+                return;
+            }
+            // Unpaid + empty history => re-selection allowed. Preserve prior address(es)
+            // so a payment already sent to a now-replaced address is still creditable.
+            $prevAddresses = is_array($em['cryptapi_prev_addresses'] ?? null) ? $em['cryptapi_prev_addresses'] : [];
+            if (!empty($em['cryptapi_address'])) {
+                $prevAddresses[] = (string)$em['cryptapi_address'];
+            }
+            $prevAddresses = array_values(array_unique(array_filter($prevAddresses, 'strlen')));
+        }
+
+        $apiKey = $this->config->get('payment_cryptapi_api_key');
+        $address = '';
+
+        // Coin allow-list; API key OR per-coin own address is sufficient.
+        if (empty($this->request->post['cryptapi_coin'])) {
+            $err_coin = $this->language->get('error_coin');
+        } else {
+            $selected = $this->request->post['cryptapi_coin'];
+
+            $allowed = $this->config->get('payment_cryptapi_cryptocurrencies');
+            if (!is_array($allowed) || !in_array($selected, $allowed, true)) {
                 $err_coin = $this->language->get('error_coin');
-            } else {
-                $selected = $this->request->post['cryptapi_coin'];
-
-                $allowed = $this->config->get('payment_cryptapi_cryptocurrencies');
-                if (!is_array($allowed) || !in_array($selected, $allowed, true)) {
-                    $err_coin = $this->language->get('error_coin');
-                }
-
-                $address = $this->config->get('payment_cryptapi_cryptocurrencies_address_' . $selected);
-                if (empty($err_coin) && empty($address) && empty($apiKey)) {
-                    $err_coin = $this->language->get('error_apikey');
-                }
             }
 
-            if (empty($err_coin) && (!empty($address) || !empty($apiKey))) {
-                $disable_conversion = $this->config->get('payment_cryptapi_disable_conversion');
-                $qr_code_size = $this->config->get('payment_cryptapi_qrcode_size');
+            $address = $this->config->get('payment_cryptapi_cryptocurrencies_address_' . $selected);
+            if (empty($err_coin) && empty($address) && empty($apiKey)) {
+                $err_coin = $this->language->get('error_apikey');
+            }
+        }
 
-                $info = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_info($selected);
-                $minTx = floatval($info->minimum_transaction_coin);
+        if (empty($err_coin) && (!empty($address) || !empty($apiKey))) {
+            $disable_conversion = $this->config->get('payment_cryptapi_disable_conversion');
+            $qr_code_size = $this->config->get('payment_cryptapi_qrcode_size');
+            $currency = $order_info['currency_code'];
 
-                $cryptoTotal = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_conversion($order_info['currency_code'], $selected, $total, $disable_conversion);
+            // Server-side fee (never trust session['cryptapi_fee']).
+            $order_total = floatval($order_info['total']);
+            $fee = $this->config->get('payment_cryptapi_fees');
+            $blockchain_fee = $this->config->get('payment_cryptapi_blockchain_fees');
+            $cryptapiFeeRaw = 0;
+            if ($fee !== 0) {
+                $cryptapiFeeRaw += floatval($fee) * $order_total;
+            }
+            if ($blockchain_fee) {
+                $estimate = $lib::get_estimate($selected);
+                if (is_object($estimate) && isset($estimate->$currency)) {
+                    $cryptapiFeeRaw += floatval($estimate->$currency);
+                } elseif (is_object($estimate) && isset($estimate->USD)) {
+                    $cryptapiFeeRaw += floatval($this->currency->convert($estimate->USD, 'USD', $currency));
+                }
+            }
+            $cryptoFee = round($cryptapiFeeRaw, 2);
+            $total = $this->currency->format($order_info['total'] + $cryptoFee, $currency, 1.00000, false);
 
-                $callbackUrl = $this->url->link('extension/cryptapi/payment/cryptapi|callback', 'order_id=' . $this->session->data['order_id'], true);
+            $info = $lib::get_info($selected, false);
+            $minTx = floatval($info->minimum_transaction_coin ?? 0);
+
+            $cryptoTotal = $lib::get_conversion($currency, $selected, $total, $disable_conversion);
+
+            // Refuse to create an order with a non-positive total.
+            if (!$lib::is_positive_number($cryptoTotal)) {
+                $err_coin = $this->language->get('error_conversion');
+            }
+
+            if (empty($err_coin)) {
+                // Per-order nonce + access token (distinct CSPRNG secrets).
+                $nonce = bin2hex(random_bytes(16));
+                $token = bin2hex(random_bytes(16));
+
+                // Registered callback URL — server-fixed base; decode &amp; so
+                // the registered string, the signed string, and REQUEST_URI all agree.
+                $callbackUrl = $this->url->link('extension/cryptapi/payment/cryptapi|callback', 'order_id=' . $order_id . '&nonce=' . $nonce, true);
                 $callbackUrl = str_replace('&amp;', '&', $callbackUrl);
 
+                // NOTE: CryptAPI constructor takes the extra own-address arg vs BlockBee.
                 $helper = new \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper($selected, $address, $apiKey, $callbackUrl, [], true);
                 $addressIn = $helper->get_address();
                 if (!isset($addressIn)) {
                     $err_coin = $this->language->get('error_adress');
-                } else {
-                    if (($cryptoTotal < $minTx)) {
-                        $err_coin = $this->language->get('value_minim') . ' ' . $minTx . ' ' . strtoupper($selected);
-                    }
+                } elseif ($cryptoTotal < $minTx) {
+                    $err_coin = $this->language->get('value_minim') . ' ' . $minTx . ' ' . strtoupper($selected);
                 }
 
                 if (empty($err_coin)) {
                     $qrCodeDataValue = $helper->get_qrcode($cryptoTotal, $qr_code_size);
                     $qrCodeData = $helper->get_qrcode('', $qr_code_size);
-                    $paymentURL = $this->url->link('extension/cryptapi/payment/cryptapi|pay', 'order_id=' . $this->session->data['order_id'], true);
+
+                    // Token baked into pay URL (email + account button + redirect).
+                    // Two params now => MUST decode &amp;.
+                    $paymentURL = $this->url->link('extension/cryptapi/payment/cryptapi|pay', 'order_id=' . $order_id . '&token=' . $token, true);
+                    $paymentURL = str_replace('&amp;', '&', $paymentURL);
 
                     $paymentData = [
                         'cryptapi_fee' => $cryptoFee,
@@ -159,24 +358,31 @@ class CryptAPI extends \Opencart\System\Engine\Controller
                         'cryptapi_cancelled' => '0',
                         'cryptapi_min' => $minTx,
                         'cryptapi_history' => json_encode([]),
-                        'cryptapi_payment_url' => $paymentURL
+                        'cryptapi_payment_url' => $paymentURL,
+                        'cryptapi_nonce' => $nonce,                // provider-shared callback secret
+                        'cryptapi_token' => $token,                // customer-facing access token
+                        'cryptapi_callback_url' => $callbackUrl,    // server-fixed base
+                        'cryptapi_paid' => '0',                     // atomic paid marker
+                        'cryptapi_prev_addresses' => $prevAddresses, // re-selection safety
                     ];
 
-                    $paymentData = json_encode($paymentData);
-                    $this->model_extension_cryptapi_payment_cryptapi->addPaymentData($this->session->data['order_id'], $paymentData);
+                    $encoded = json_encode($paymentData);
+                    $this->model_extension_cryptapi_payment_cryptapi->addPaymentData($order_id, $encoded);
 
-                    $this->model_checkout_order->addHistory($this->session->data['order_id'], $this->config->get('payment_cryptapi_order_status_id'), '', true);
+                    $this->model_checkout_order->addHistory($order_id, $this->config->get('payment_cryptapi_order_status_id'), '', true);
 
-                    $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-                    $this->sendPaymentInstructionsEmail($order_info, json_decode($paymentData, true), $paymentURL);
+                    $order_info = $this->model_checkout_order->getOrder($order_id);
+                    $this->sendPaymentInstructionsEmail($order_info, json_decode($encoded, true), $paymentURL);
 
-                    $json['redirect'] = $paymentURL;
+                    $json['redirect'] = $paymentURL;   // already &amp;-decoded
                 } else {
                     $json['error']['warning'] = sprintf($this->language->get('error_payment'), $err_coin);
                 }
             } else {
                 $json['error']['warning'] = sprintf($this->language->get('error_payment'), $err_coin);
             }
+        } else {
+            $json['error']['warning'] = sprintf($this->language->get('error_payment'), $err_coin);
         }
 
         $this->response->addHeader('Content-Type: application/json');
@@ -220,13 +426,17 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
         $this->load->language('extension/cryptapi/payment/cryptapi');
 
+        $this->response->addHeader('Referrer-Policy: no-referrer');   // don't leak ?token= via Referer
+
+        // Load the payment model before the gate so authorizeOrderAccess() is usable.
+        $this->load->model('extension/cryptapi/payment/cryptapi');
+
         $order = $this->isCryptapiOrder();
 
-        if (!$order) {
+        if (!$order || !$this->authorizeOrderAccess($order)) {
             $this->response->redirect($this->url->link('common/home', '', true));
         }
 
-        $this->load->model('extension/cryptapi/payment/cryptapi');
         $this->load->model('localisation/currency');
 
         $metaData = $this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order['order_id']);
@@ -239,7 +449,9 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $currencySymbolLeft = $this->model_localisation_currency->getCurrencies()[$order['currency_code']]['symbol_left'];
         $currencySymbolRight = $this->model_localisation_currency->getCurrencies()[$order['currency_code']]['symbol_right'];
 
-        $ajaxUrl = $this->url->link('extension/cryptapi/payment/cryptapi|status', 'order_id=' . $order['order_id'], true);
+        // Carry the per-order token into status polling. Two params now => decode &amp;.
+        $token   = is_array($metaData) ? (string)($metaData['cryptapi_token'] ?? '') : '';
+        $ajaxUrl = $this->url->link('extension/cryptapi/payment/cryptapi|status', 'order_id=' . $order['order_id'] . '&token=' . $token, true);
         $ajaxUrl = str_replace('&amp;', '&', $ajaxUrl);
 
         $allowed_to_value = array(
@@ -303,8 +515,15 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         if (!$order) {
             return;
         }
-
-        return $this->response->redirect($this->url->link('extension/cryptapi/payment/cryptapi|pay', 'order_id=' . $order['order_id'], true));
+        $this->load->model('extension/cryptapi/payment/cryptapi');
+        $meta = json_decode((string)$this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order['order_id']), true);
+        // Prefer the stored payment URL (already &amp;-decoded and carries the token).
+        if (is_array($meta) && !empty($meta['cryptapi_payment_url'])) {
+            return $this->response->redirect($meta['cryptapi_payment_url']);
+        }
+        $token = is_array($meta) ? (string)($meta['cryptapi_token'] ?? '') : '';
+        $url = $this->url->link('extension/cryptapi/payment/cryptapi|pay', 'order_id=' . $order['order_id'] . '&token=' . $token, true);
+        return $this->response->redirect(str_replace('&amp;', '&', $url));   // two params => decode &amp;
     }
 
     private function sendPaymentInstructionsEmail(array $order, array $metaData, string $paymentURL): void
@@ -357,9 +576,11 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         // Library
         require(DIR_EXTENSION . 'cryptapi/system/library/cryptapi.php');
 
-        $order = $this->isCryptapiOrder(true);
+        $this->response->addHeader('Referrer-Policy: no-referrer');
 
-        if (!$order) {
+        $order = $this->isCryptapiOrder(true);                 // keep true: paid/cancelled view needed
+
+        if (!$order || !$this->authorizeOrderAccess($order)) { // authorizeOrderAccess loads the model
             return false;
         }
 
@@ -394,9 +615,18 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             $cryptapi_pending = 1;
         }
 
-        $counter_calc = (int)$metaData['cryptapi_last_price_update'] + (int)$this->config->get('payment_cryptapi_refresh_values') - time();
+        // Refresh ONLY this already-authorized order — not a global sweep.
+        $refresh_values = (int)$this->config->get('payment_cryptapi_refresh_values');
+        $counter_calc = (int)$metaData['cryptapi_last_price_update'] + $refresh_values - time();
         if (!$this->isOrderPaid($order) && $counter_calc <= 0) {
-            $this->cron(false);
+            $this->refreshOrder($order);
+            // refreshOrder() may have advanced last_price_update; recompute so the
+            // client gets the fresh remaining time, not the stale (<= 0) value that
+            // would make the countdown reset to ~0 instead of the full interval.
+            $fresh = json_decode((string)$this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order['order_id']), true);
+            if (is_array($fresh) && isset($fresh['cryptapi_last_price_update'])) {
+                $counter_calc = (int)$fresh['cryptapi_last_price_update'] + $refresh_values - time();
+            }
         }
 
         if ($remaining_pending <= $min_tx && $remaining_pending > 0) {
@@ -417,7 +647,7 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             'order_history' => $history,
             'already_paid' => $currencySymbolLeft . $already_paid . $currencySymbolRight,
             'already_paid_fiat' => floatval($already_paid_fiat) <= 0 ? 0 : floatval($already_paid_fiat),
-            'counter' => (string)$counter_calc,
+            'counter' => (string)max(0, $counter_calc),
             'fiat_symbol_left' => $currencySymbolLeft,
             'fiat_symbol_right' => $currencySymbolRight,
         ];
@@ -438,186 +668,167 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $this->load->model('extension/cryptapi/payment/cryptapi');
         $this->response->addHeader('Content-Type: application/json');
 
-        $order_timeout = (int) $this->config->get('payment_cryptapi_order_cancelation_timeout');
-        $value_refresh = (int) $this->config->get('payment_cryptapi_refresh_values');
-        $qrcode_size = (int) $this->config->get('payment_cryptapi_qrcode_size');
+        // Gate the public route (CLI / configured secret / proxy-safe loopback).
+        if (!$this->isCronAuthorized()) {
+            http_response_code(403);
+            return $this->response->setOutput(json_encode(['status' => 'forbidden']));
+        }
 
         $response = $this->response->setOutput(json_encode(['status' => 'ok']));
 
+        $order_timeout = (int)$this->config->get('payment_cryptapi_order_cancelation_timeout');
+        $value_refresh = (int)$this->config->get('payment_cryptapi_refresh_values');
         if ($order_timeout === 0 && $value_refresh === 0) {
             return $response;
         }
 
         $orders = $this->model_extension_cryptapi_payment_cryptapi->getOrders();
-
         if (empty($orders)) {
             return $response;
         }
-
         foreach ($orders as $order) {
-
-            $order_id = $order['order_id'];
-
-            $currency = $order['currency_code'];
-
-            $metaData = json_decode($this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order['order_id']), true);
-
-            if (!empty($metaData['cryptapi_last_price_update'])) {
-                $last_price_update = $metaData['cryptapi_last_price_update'];
-
-                $history = json_decode($metaData['cryptapi_history'], true);
-
-                $min_tx = (float) $metaData['cryptapi_min'];
-
-                $calc = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::calc_order($history, $metaData['cryptapi_total'], floatval($metaData['cryptapi_total_fiat']));
-
-                $remaining = $calc['remaining'];
-                $remaining_pending = $calc['remaining_pending'];
-                $already_paid = $calc['already_paid'];
-
-                if ($value_refresh !== 0 && ($last_price_update + $value_refresh <= time())) {
-                    if ($remaining === $remaining_pending) {
-                        $cryptapi_coin = $metaData['cryptapi_currency'];
-
-                        $crypto_total = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_conversion($currency, $cryptapi_coin, $metaData['cryptapi_total_fiat'], $this->config->get('payment_cryptapi_disable_conversion'));
-
-                        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_total', $crypto_total);
-
-                        $calc_cron = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::calc_order($history, $crypto_total, $metaData['cryptapi_total_fiat']);
-
-                        $crypto_remaining_total = $calc_cron['remaining_pending'];
-
-                        if ($remaining_pending <= $min_tx && $remaining_pending > 0) {
-                            $qr_code_data_value = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $min_tx, $qrcode_size);
-                        } else {
-                            $qr_code_data_value = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $crypto_remaining_total, $qrcode_size);
-                        }
-
-                        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_qrcode_value', $qr_code_data_value['qr_code']);
-                    }
-
-                    $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_last_price_update', time());
-                }
-
-                $age_seconds = isset($order['age_seconds']) ? (int)$order['age_seconds'] : (time() - strtotime($order['date_added']));
-                if ($order_timeout !== 0 && $age_seconds >= $order_timeout && $already_paid <= 0) {
-                    $this->model_checkout_order->addHistory($order['order_id'], 7);
-                    $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_cancelled', '1');
-                }
-            }
+            $this->refreshOrder($order);
         }
-
         return $response;
     }
 
     public function callback()
     {
         require(DIR_EXTENSION . 'cryptapi/system/library/cryptapi.php');
+        $lib = '\\Opencart\\Extension\\CryptAPI\\System\\Library\\CryptAPIHelper';
 
         $this->load->model('extension/cryptapi/payment/cryptapi');
-
-        // Verify the webhook signature before touching any state. CryptAPI's
-        // callbacks may be signed by api.cryptapi.io (non-pro) OR api.blockbee.io
-        // (pro) depending on whether the order used an API key — try both pubkeys.
-        $signature = $_SERVER['HTTP_X_CA_SIGNATURE'] ?? '';
-        $scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $scheme    = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? $scheme;
-        $host      = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? '');
-        $signed_url = $scheme . '://' . $host . ($_SERVER['REQUEST_URI'] ?? '');
-
-        $verified = false;
-        foreach (['cryptapi.pubkey' => false, 'blockbee.pubkey' => true] as $cache_key => $pro) {
-            $pubkey = $this->cache->get($cache_key);
-            if (empty($pubkey)) {
-                $pubkey = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::fetch_pubkey($pro);
-                if (!empty($pubkey)) {
-                    $this->cache->set($cache_key, $pubkey);
-                }
-            }
-            if (!empty($pubkey) && \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::verify_signature($signed_url, $signature, $pubkey)) {
-                $verified = true;
-                break;
-            }
-        }
-
-        if (!$verified) {
-            http_response_code(403);
-            die('invalid signature');
-        }
-
-        $data = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::process_callback($_GET);
-
         $this->load->model('checkout/order');
 
-        $order = $this->model_checkout_order->getOrder((int)$data['order_id']);
+        $data = $lib::process_callback($_GET);
 
-        $metaData = json_decode($this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order['order_id']), true);
+        // Resolve the order from the deposit address; fall back to the signed order_id.
+        $bound = $this->model_extension_cryptapi_payment_cryptapi->getOrderByAddress((string)($data['address_in'] ?? ''));
+        $order_id = !empty($bound['order_id']) ? (int)$bound['order_id'] : (int)($data['order_id'] ?? 0);
 
-        if ($data["coin"] !== $metaData['cryptapi_currency']) {
-            die("*ok*");
+        $metaRaw = $this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order_id);
+        if (empty($metaRaw)) { http_response_code(403); die('unknown order'); }
+        $metaData = json_decode($metaRaw, true);
+        if (!is_array($metaData)) { http_response_code(403); die('bad order data'); }
+
+        // Verify signature over a SERVER-FIXED reconstructed URL (no header trust).
+        $base = !empty($metaData['cryptapi_callback_url'])
+            ? $metaData['cryptapi_callback_url']
+            : (defined('HTTPS_SERVER') ? HTTPS_SERVER : (defined('HTTP_SERVER') ? HTTP_SERVER : ''));
+        $signed_url = $lib::build_signed_url($base, $_SERVER['REQUEST_URI'] ?? '');
+        $signature  = $_SERVER['HTTP_X_CA_SIGNATURE'] ?? '';
+
+        // api.cryptapi.io and api.blockbee.io are the same service and sign with the
+        // SAME RSA key (verified: /pubkey/ is byte-identical on both hosts), so a single
+        // pubkey verifies every callback regardless of pro/own-address mode.
+        $pubkey = $this->cache->get('cryptapi.pubkey');
+        if (empty($pubkey)) {
+            $pubkey = $lib::fetch_pubkey();
+            if (!empty($pubkey)) { $this->cache->set('cryptapi.pubkey', $pubkey); }
+        }
+        if (empty($pubkey) || $signed_url === '' || !$lib::verify_signature($signed_url, $signature, $pubkey)) {
+            http_response_code(403); die('invalid signature');
         }
 
-        if ($this->isOrderPaid($order)) {
-            die("*ok*");
+        // Per-order nonce, BEFORE any state change (empty==empty passes for legacy rows).
+        if (!hash_equals((string)($metaData['cryptapi_nonce'] ?? ''), (string)($data['nonce'] ?? ''))) {
+            http_response_code(403); die('invalid nonce');
+        }
+
+        // Address binding (current or a prior re-selected address) + order_id consistency.
+        $cb_addr     = strtolower(trim((string)($data['address_in'] ?? '')));
+        $stored_addr = strtolower(trim((string)($metaData['cryptapi_address'] ?? '')));
+        $addr_ok = ($cb_addr !== '' && $stored_addr !== '' && hash_equals($stored_addr, $cb_addr));
+        if (!$addr_ok && $cb_addr !== '' && !empty($metaData['cryptapi_prev_addresses']) && is_array($metaData['cryptapi_prev_addresses'])) {
+            foreach ($metaData['cryptapi_prev_addresses'] as $prev) {
+                if (hash_equals(strtolower(trim((string)$prev)), $cb_addr)) { $addr_ok = true; break; }
+            }
+        }
+        if (!$addr_ok) { http_response_code(403); die('address mismatch'); }
+        if ((int)($data['order_id'] ?? 0) !== $order_id) {
+            http_response_code(403); die('order mismatch');
+        }
+
+        $order = $this->model_checkout_order->getOrder($order_id);
+
+        if (($data['coin'] ?? null) !== ($metaData['cryptapi_currency'] ?? null)) {
+            die('*ok*');
+        }
+        if ($this->isOrderPaid($order) || (!empty($metaData['cryptapi_paid']) && (string)$metaData['cryptapi_paid'] === '1')) {
+            die('*ok*');
+        }
+
+        // Required total must be positive.
+        if (!$lib::is_positive_number($metaData['cryptapi_total'] ?? null)) {
+            http_response_code(403); die('total not set');
         }
 
         $disable_conversion = $this->config->get('payment_cryptapi_disable_conversion');
-
         $qrcode_size = $this->config->get('payment_cryptapi_qrcode_size');
 
-        $paid = $data['value_coin'];
-
-        $min_tx = floatval($metaData['cryptapi_min']);
-
-        $history = json_decode($metaData['cryptapi_history'], true);
-
-        if (empty($history[$data['uuid']])) {
-            $fiat_conversion = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_conversion($metaData['cryptapi_currency'], $order['currency_code'], $paid, $disable_conversion);
-
-            $history[$data['uuid']] = [
-                'timestamp' => time(),
-                'value_paid' => \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::sig_fig($paid, 6),
-                'value_paid_fiat' => $fiat_conversion,
-                'pending' => $data['pending']
-            ];
-        } else {
-            $history[$data['uuid']]['pending'] = $data['pending'];
+        // value/value_coin: own-address (api.cryptapi.io) uses `value`; pro (api.blockbee.io) uses `value_coin`.
+        $paid = $data['value_coin'] ?? null;
+        if ($paid === null || $paid === '') {
+            $paid = $data['value'] ?? null;   // api.cryptapi.io (non-pro / own-address) naming
         }
 
-        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order['order_id'], 'cryptapi_history', json_encode($history));
+        $min_tx = floatval($metaData['cryptapi_min']);
+        $uuid   = (string)($data['uuid'] ?? '');
+        if ($uuid === '') { http_response_code(403); die('missing uuid'); }
 
-        $metaData = json_decode($this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order['order_id']), true);
+        // Build the entry, then atomic per-uuid merge.
+        $history = json_decode($metaData['cryptapi_history'], true) ?: [];
+        if (empty($history[$uuid])) {
+            $fiat_conversion = $lib::get_conversion($metaData['cryptapi_currency'], $order['currency_code'], $paid, $disable_conversion);
+            $entry = [
+                'timestamp'       => time(),
+                'value_paid'      => $lib::sig_fig($paid, 6),
+                'value_paid_fiat' => $fiat_conversion,
+                'pending'         => $data['pending'],
+            ];
+        } else {
+            $entry = ['pending' => $data['pending']];
+        }
+        $this->model_extension_cryptapi_payment_cryptapi->addHistoryEntry($order_id, $uuid, $entry);
 
-        $history = json_decode($metaData['cryptapi_history'], true); // <<-something's wrong
-
-        $calc = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::calc_order($history, $metaData['cryptapi_total'], $metaData['cryptapi_total_fiat']);
-
-        $remaining = $calc['remaining'];
+        // Re-read merged state.
+        $metaData = json_decode($this->model_extension_cryptapi_payment_cryptapi->getPaymentData($order_id), true);
+        $history  = json_decode($metaData['cryptapi_history'], true) ?: [];
+        $calc = $lib::calc_order($history, $metaData['cryptapi_total'], $metaData['cryptapi_total_fiat']);
+        $remaining         = $calc['remaining'];
         $remaining_pending = $calc['remaining_pending'];
 
         if ($remaining_pending <= 0) {
             if ($remaining <= 0) {
-                $processing_state = 2;
-                $this->model_checkout_order->addHistory($order['order_id'], $processing_state);
-                $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order['order_id'], 'cryptapi_txid', $data['txid_in']);
+                // Mark paid at most once; release the claim if side effects fail.
+                if ($this->model_extension_cryptapi_payment_cryptapi->claimPaidTransition($order_id)) {
+                    try {
+                        $this->model_checkout_order->addHistory($order_id, 2);
+                        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_txid', $data['txid_in']);
+                    } catch (\Throwable $e) {
+                        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_paid', '0');
+                        http_response_code(500); die('processing error');   // provider will retry
+                    }
+                }
             }
             die('*ok*');
         }
 
         if ($remaining_pending <= $min_tx) {
-            $qrcode_conv = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $metaData['cryptapi_currency'], $min_tx, $qrcode_size)['qr_code'];
+            $qrcode_conv = $lib::get_static_qrcode($metaData['cryptapi_address'], $metaData['cryptapi_currency'], $min_tx, $qrcode_size)['qr_code'];
         } else {
-            $qrcode_conv = \Opencart\Extension\CryptAPI\System\Library\CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $metaData['cryptapi_currency'], $remaining_pending, $qrcode_size)['qr_code'];
+            $qrcode_conv = $lib::get_static_qrcode($metaData['cryptapi_address'], $metaData['cryptapi_currency'], $remaining_pending, $qrcode_size)['qr_code'];
         }
-
-        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order['order_id'], 'cryptapi_qrcode_value', $qrcode_conv);
-
-        die("*ok*");
+        $this->model_extension_cryptapi_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_qrcode_value', $qrcode_conv);
+        die('*ok*');
     }
 
     function order_pay_button(&$route, &$data, &$output)
     {
-        $order_id = $this->request->get['order_id'];
+        $order_id = (int)($this->request->get['order_id'] ?? 0);
+        if ($order_id <= 0) {
+            return;
+        }
 
         $this->load->model('extension/cryptapi/payment/cryptapi');
         $this->load->model('checkout/order');

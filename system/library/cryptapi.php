@@ -306,8 +306,32 @@ class CryptAPIHelper
     }
 
 
+    // Rebuild the signed-URL origin from a server-fixed base so the
+    // verified message never trusts X-Forwarded-*/Host request headers.
+    public static function build_signed_url(string $callback_url, string $request_uri): string
+    {
+        $parts = parse_url($callback_url);
+        if ($parts === false || empty($parts['scheme']) || empty($parts['host'])) {
+            return '';
+        }
+        $origin = $parts['scheme'] . '://' . $parts['host'];
+        if (!empty($parts['port'])) {
+            $origin .= ':' . $parts['port'];
+        }
+        return $origin . $request_uri;
+    }
+
+    // Numeric-and-positive guard for totals/conversions.
+    public static function is_positive_number($value): bool
+    {
+        return is_numeric($value) && (float)$value > 0;
+    }
+
     public static function sig_fig($value, $digits)
     {
+        if (!is_numeric($value)) {
+            return '0';                       // non-numeric => '0' (was: (string)null => '')
+        }
         $value = (string) $value;
         if (strpos($value, '.') !== false) {
             if ($value[0] != '-') {
@@ -322,6 +346,17 @@ class CryptAPIHelper
 
     public static function calc_order($history, $total, $total_fiat): array
     {
+        // A missing/invalid required total must be NOT-payable, never 0.
+        if (!is_numeric($total) || (float)$total <= 0) {
+            return [
+                'already_paid'      => 0.0,
+                'already_paid_fiat' => 0.0,
+                'remaining'         => 1.0,   // positive sentinel => never <= 0 => never auto-paid
+                'remaining_pending' => 1.0,
+                'remaining_fiat'    => is_numeric($total_fiat) ? floatval($total_fiat) : 0.0,
+            ];
+        }
+
         $already_paid = 0;
         $already_paid_fiat = 0;
         $remaining = $total;
@@ -330,15 +365,17 @@ class CryptAPIHelper
 
         if (!empty($history)) {
             foreach ($history as $uuid => $item) {
-                if ((int)$item['pending'] === 0) {
-                    $remaining = bcsub(CryptAPIHelper::sig_fig($remaining, 6), $item['value_paid'], 8);
+                $vp  = CryptAPIHelper::sig_fig($item['value_paid'] ?? '0', 8);
+                $vpf = CryptAPIHelper::sig_fig($item['value_paid_fiat'] ?? '0', 8);
+                if ((int)($item['pending'] ?? 1) === 0) {
+                    $remaining = bcsub(CryptAPIHelper::sig_fig($remaining, 6), $vp, 8);
                 }
 
-                $remaining_pending = bcsub(CryptAPIHelper::sig_fig($remaining_pending, 6), $item['value_paid'], 8);
-                $remaining_fiat = bcsub(CryptAPIHelper::sig_fig($remaining_fiat, 6), $item['value_paid_fiat'], 8);
+                $remaining_pending = bcsub(CryptAPIHelper::sig_fig($remaining_pending, 6), $vp, 8);
+                $remaining_fiat = bcsub(CryptAPIHelper::sig_fig($remaining_fiat, 6), $vpf, 8);
 
-                $already_paid = bcadd(CryptAPIHelper::sig_fig($already_paid, 6), $item['value_paid'], 8);
-                $already_paid_fiat = bcadd(CryptAPIHelper::sig_fig($already_paid_fiat, 6), $item['value_paid_fiat'], 8);
+                $already_paid = bcadd(CryptAPIHelper::sig_fig($already_paid, 6), $vp, 8);
+                $already_paid_fiat = bcadd(CryptAPIHelper::sig_fig($already_paid_fiat, 6), $vpf, 8);
             }
         }
 

@@ -1,7 +1,7 @@
 {
   "name": "CryptAPI Payment Module",
   "code": "cryptapi",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "author": "CryptAPI",
   "link": "https://cryptapi.io",
   "compatibility": "4.0.0.0-4.1.0.3",

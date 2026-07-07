@@ -18,6 +18,7 @@ $_['value_minim']  = 'Valeur trop basse, le minimum est';
 $_['error_coin']  = 'Aucune cryptomonnaie sélectionnée pour le paiement';
 $_['error_apikey']  = 'Informations du propriétaire de la boutique insuffisantes pour le paiement';
 $_['error_adress']  = 'Cette cryptomonnaie ne peut pas être utilisée pour le paiement pour le moment';
+$_['error_conversion']  = 'Impossible de déterminer le montant du paiement pour le moment, veuillez réessayer.';
 
 $_['button_pay'] = 'Payer maintenant';
 
