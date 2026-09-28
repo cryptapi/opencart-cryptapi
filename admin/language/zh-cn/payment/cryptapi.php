@@ -3,6 +3,7 @@
 
 // Heading
 $_['heading_title'] = 'CryptAPI';
+$_['text_default_title'] = '使用加密货币支付';
 
 $_['title'] = '标题';
 
@@ -36,6 +37,7 @@ $_['entry_btc_address'] = $_['text_btc'] . ' 地址';
 
 $_['entry_order_status'] = '订单状态';
 $_['warning_currency_unsupported'] = '您的店铺货币(%s)不在 CryptAPI 支持的法币列表中。区块链手续费估算将回退到美元。请参阅 https://docs.cryptapi.io 查看当前支持列表。';
+$_['warning_api_key_removed'] = 'API 密钥已不再受支持。请为每种启用的加密货币设置收款地址,然后保存这些设置。未设置地址的加密货币将不会在结账时显示。';
 $_['entry_paid_order_statuses'] = '视为已支付的状态';
 $_['text_paid_order_statuses']  = '选择哪些订单状态视为"已支付"。这些状态的订单不会被回调重新处理,也不会再被轮询查询更多支付。按住 Ctrl/Cmd 进行多选。';
 $_['entry_status'] = '状态';
@@ -80,7 +82,7 @@ $_['entry_sort_order'] = '排序';
 $_['error_permission'] = '警告:您没有修改 CryptAPI 支付模块的权限';
 
 // Help hints
-$_['help_cryptocurrencies'] = '如果您使用 BlockBee,可以选择在此处或在 BlockBee 设置页面中设置收款地址。<br/>要在插件设置中设置地址,请在创建 API 密钥时选择 "Address Override"。<br/>要在 BlockBee 设置中设置地址,请在创建 API 密钥时不要选择 "Address Override"。';
+$_['help_cryptocurrencies'] = '启用您要接受的加密货币,并为每种加密货币设置收款地址。';
 $_['help_cryptocurrency'] = '勾选复选框以启用该加密货币';
 
 
@@ -91,9 +93,6 @@ $_['disable_conversion'] = '禁用转换';
 $_['disable_conversion_warn_bold'] = '注意:此选项将禁用所有加密货币的价格转换!';
 $_['disable_conversion_warn'] = '如果勾选,价格将不会从店铺货币转换为用户选择的加密货币,系统将要求用户支付店铺显示的相同数值,无论选择哪种加密货币';
 
-
-$_['api_key'] = 'BlockBee API 密钥';
-$_['api_key_info'] = "在此输入您的 BlockBee API 密钥。可在 BlockBee 获取。注意:如果未启用 'Address Override' 权限,您必须在面板中设置地址,否则支付可能失败。";
 
 $_['info_icon'] = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="ms-1 bi bi-info-circle" viewBox="0 0 16 16">
                                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>

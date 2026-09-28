@@ -3,20 +3,17 @@ namespace Opencart\Extension\CryptAPI\System\Library;
 class CryptAPIHelper
 {
     private static $base_url = "https://api.cryptapi.io";
-    private static $pro_url = "https://api.blockbee.io";
     private $own_address = null;
     private $payment_address = null;
     private $callback_url = null;
     private $coin = null;
     private $pending = false;
     private $parameters = [];
-    private $api_key = null;
 
-    public function __construct($coin, $own_address, $api_key, $callback_url, $parameters = [], $pending = false)
+    public function __construct($coin, $own_address, $callback_url, $parameters = [], $pending = false)
     {
         $this->own_address = $own_address;
         $this->callback_url = $callback_url;
-        $this->api_key = $api_key;
         $this->coin = $coin;
         $this->pending = $pending ? 1 : 0;
         $this->parameters = $parameters;
@@ -25,13 +22,7 @@ class CryptAPIHelper
     public function get_address()
     {
 
-        if (empty($this->coin) || empty($this->callback_url)) {
-            return null;
-        }
-
-        $api_key = $this->api_key;
-
-        if (empty($api_key) && empty($this->own_address)) {
+        if (empty($this->coin) || empty($this->callback_url) || empty($this->own_address)) {
             return null;
         }
 
@@ -41,26 +32,11 @@ class CryptAPIHelper
             $callback_url = "{$this->callback_url}?{$req_parameters}";
         }
 
-        if (!empty($api_key) && empty($this->own_address)) {
-            $ca_params = [
-                'apikey' => $api_key,
-                'callback' => $callback_url,
-                'pending' => $this->pending,
-            ];
-        } elseif (empty($api_key) && !empty($this->own_address)) {
-            $ca_params = [
-                'callback' => $callback_url,
-                'address' => $this->own_address,
-                'pending' => $this->pending,
-            ];
-        } elseif (!empty($api_key) && !empty($this->own_address)) {
-            $ca_params = [
-                'apikey' => $api_key,
-                'callback' => $callback_url,
-                'address' => $this->own_address,
-                'pending' => $this->pending,
-            ];
-        }
+        $ca_params = [
+            'callback' => $callback_url,
+            'address' => $this->own_address,
+            'pending' => $this->pending,
+        ];
 
         $response = CryptAPIHelper::_request($this->coin, 'create', $ca_params);
 
@@ -204,13 +180,11 @@ class CryptAPIHelper
     }
 
     /**
-     * Fetches the public key from either api.cryptapi.io (non-pro) or
-     * api.blockbee.io (pro). Returns the PEM-encoded key or null.
+     * Fetches the public key from api.cryptapi.io. Returns the PEM-encoded key or null.
      */
-    public static function fetch_pubkey(bool $pro = false): ?string
+    public static function fetch_pubkey(): ?string
     {
-        $base = $pro ? CryptAPIHelper::$pro_url : CryptAPIHelper::$base_url;
-        $response = CryptAPIHelper::_raw_request($base . '/pubkey/');
+        $response = CryptAPIHelper::_raw_request(CryptAPIHelper::$base_url . '/pubkey/');
 
         if (!is_object($response) || ($response->status ?? '') !== 'success' || empty($response->pubkey)) {
             return null;
@@ -235,9 +209,8 @@ class CryptAPIHelper
 
     public static function process_callback($_get)
     {
-        // Keep both `value`/`value_forwarded` (CryptAPI's older naming) and
-        // `value_coin`/`value_forwarded_coin` (newer naming used by the pro
-        // API) — the contract differs between api.cryptapi.io and api.blockbee.io.
+        // Keep both `value`/`value_forwarded` (older naming) and
+        // `value_coin`/`value_forwarded_coin` (newer naming); callbacks may carry either.
         $params = [
             'uuid' => $_get['uuid'] ?? null,
             'address_in' => $_get['address_in'] ?? null,
@@ -392,10 +365,6 @@ class CryptAPIHelper
     {
         $base_url = CryptAPIHelper::$base_url;
 
-        if (!empty($params['apikey']) && $endpoint !== 'info') {
-            $base_url = CryptAPIHelper::$pro_url;
-        }
-
         if (!empty($coin)) {
             $coin = str_replace('_', '/', $coin);
             $url = "{$base_url}/{$coin}/{$endpoint}/";
@@ -417,9 +386,14 @@ class CryptAPIHelper
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 1);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        // Without limits a slow or blocked connection hangs checkout until PHP gives up
+        // (cURL's own connect default is 300s), leaving the customer's button spinning.
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 15);
 
+        // No curl_close(): a no-op since PHP 8.0 and deprecated in PHP 8.5, where
+        // OpenCart's error handler would corrupt the JSON response.
         $response = curl_exec($curl);
-        curl_close($curl);
 
         if ($response === false || $response === '') {
             return null;

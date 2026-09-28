@@ -2,6 +2,7 @@
 
 // Heading
 $_['heading_title'] = 'CryptAPI';
+$_['text_default_title'] = 'Pay with Crypto';
 
 $_['title'] = 'Title';
 
@@ -35,6 +36,7 @@ $_['entry_btc_address'] = $_['text_btc'] . ' Address';
 
 $_['entry_order_status'] = 'Order status';
 $_['warning_currency_unsupported'] = 'Your store currency (%s) is not in CryptAPI\'s supported fiat list. Blockchain fee estimates will fall back to USD. See https://docs.cryptapi.io for the current supported set.';
+$_['warning_api_key_removed'] = 'API keys are no longer supported. Set a receiving address for each cryptocurrency you enable, then save these settings. Cryptocurrencies without an address will not show at checkout.';
 $_['entry_paid_order_statuses'] = 'Paid order statuses';
 $_['text_paid_order_statuses']  = 'Select which order statuses count as "paid". Orders in these statuses will not be re-processed by callbacks or polled for further payments. Hold Ctrl/Cmd to select multiple.';
 $_['entry_status'] = 'Status';
@@ -79,7 +81,7 @@ $_['entry_sort_order'] = 'Sort order';
 $_['error_permission'] = 'Warning: You do not have permission to modify the CryptAPI payment module';
 
 // Help hints
-$_['help_cryptocurrencies'] = 'If you are using BlockBee you can choose if setting the receiving addresses here bellow or in your BlockBee settings page.<br/>In order to set the addresses on plugin settings, you need to select “Address Override” while creating the API key.<br/>In order to set the addresses on BlockBee settings, you need to NOT select “Address Override” while creating the API key.';
+$_['help_cryptocurrencies'] = 'Enable the cryptocurrencies you want to accept and set a receiving address for each one.';
 $_['help_cryptocurrency'] = 'Click the checkbox to enable the cryptocurrency';
 
 
@@ -90,9 +92,6 @@ $_['disable_conversion'] = 'Disable Conversion';
 $_['disable_conversion_warn_bold'] = 'Attention: This option will disable the price conversion for ALL cryptocurrencies!';
 $_['disable_conversion_warn'] = 'If you check this, pricing will not be converted from the currency of your shop to the cryptocurrency selected by the user, and users will be requested to pay the same value as shown on your shop, regardless of the cryptocurrency selected';
 
-
-$_['api_key'] = 'BlockBee API Key';
-$_['api_key_info'] = "Insert here your BlockBee API Key. You can get one with BlockBee. Notice: If API permission 'Address Override' is not enabled you must set the address in the dashboard otherwise payments may fail.";
 
 $_['info_icon'] = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="ms-1 bi bi-info-circle" viewBox="0 0 16 16">
                                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>

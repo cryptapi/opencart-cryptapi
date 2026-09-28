@@ -2,6 +2,7 @@
 
 // Heading
 $_['heading_title'] = 'CryptAPI';
+$_['text_default_title'] = 'Mit Krypto bezahlen';
 
 $_['title'] = 'Titel';
 
@@ -35,6 +36,7 @@ $_['entry_btc_address'] = $_['text_btc'] . ' Adresse';
 
 $_['entry_order_status'] = 'Bestellstatus';
 $_['warning_currency_unsupported'] = 'Die Währung Ihres Shops (%s) ist nicht in der CryptAPI-Liste der unterstützten Fiat-Währungen enthalten. Blockchain-Gebührenschätzungen verwenden USD als Fallback. Siehe https://docs.cryptapi.io für die aktuelle Liste.';
+$_['warning_api_key_removed'] = 'API-Schlüssel werden nicht mehr unterstützt. Legen Sie für jede aktivierte Kryptowährung eine Empfangsadresse fest und speichern Sie dann diese Einstellungen. Kryptowährungen ohne Adresse werden an der Kasse nicht angezeigt.';
 $_['entry_paid_order_statuses'] = 'Status, die als bezahlt gelten';
 $_['text_paid_order_statuses']  = 'Wählen Sie, welche Bestellstatus als "bezahlt" gelten. Bestellungen in diesen Status werden weder von Callbacks weiterverarbeitet noch nach weiteren Zahlungen abgefragt. Strg/Cmd halten für Mehrfachauswahl.';
 $_['entry_status'] = 'Status';
@@ -79,7 +81,7 @@ $_['entry_sort_order'] = 'Sortierreihenfolge';
 $_['error_permission'] = 'Achtung: Sie haben keine Berechtigung, das CryptAPI-Zahlungsmodul zu ändern';
 
 // Help hints
-$_['help_cryptocurrencies'] = 'Wenn Sie BlockBee verwenden, können Sie wählen, ob Sie die Empfangsadressen hier oder auf der BlockBee-Einstellungsseite festlegen.<br/>Um die Adressen in den Plugin-Einstellungen festzulegen, wählen Sie "Address Override" beim Erstellen des API-Schlüssels.<br/>Um die Adressen in den BlockBee-Einstellungen festzulegen, wählen Sie "Address Override" NICHT beim Erstellen des API-Schlüssels.';
+$_['help_cryptocurrencies'] = 'Aktivieren Sie die Kryptowährungen, die Sie akzeptieren möchten, und legen Sie für jede eine Empfangsadresse fest.';
 $_['help_cryptocurrency'] = 'Klicken Sie auf das Kontrollkästchen, um die Kryptowährung zu aktivieren';
 
 
@@ -90,9 +92,6 @@ $_['disable_conversion'] = 'Umrechnung deaktivieren';
 $_['disable_conversion_warn_bold'] = 'Achtung: Diese Option deaktiviert die Preisumrechnung für ALLE Kryptowährungen!';
 $_['disable_conversion_warn'] = 'Wenn Sie dies aktivieren, wird der Preis nicht von der Shop-Währung in die vom Nutzer gewählte Kryptowährung umgerechnet, und der Nutzer wird aufgefordert, denselben Wert zu zahlen, der im Shop angezeigt wird, unabhängig von der gewählten Kryptowährung';
 
-
-$_['api_key'] = 'BlockBee API-Schlüssel';
-$_['api_key_info'] = "Geben Sie hier Ihren BlockBee API-Schlüssel ein. Sie können einen bei BlockBee erhalten. Hinweis: Wenn die Berechtigung 'Address Override' nicht aktiviert ist, müssen Sie die Adresse im Dashboard festlegen, sonst können Zahlungen fehlschlagen.";
 
 $_['info_icon'] = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="ms-1 bi bi-info-circle" viewBox="0 0 16 16">
                                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>

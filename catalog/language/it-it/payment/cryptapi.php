@@ -1,7 +1,7 @@
 <?php
 
 // Text
-$_['text_title'] = 'Criptovaluta' . ' <img src="' . HTTP_SERVER . 'image/catalog/cryptapi/payment.png" alt="cryptapi" style="height:23px" />';
+$_['text_title'] = 'Paga con crypto';
 $_['text_legend'] = 'Paga con criptovaluta';
 $_['text_basket'] = 'Carrello';
 $_['text_checkout'] = 'Cassa';
@@ -21,6 +21,9 @@ $_['error_adress']  = 'Questa criptovaluta non può essere utilizzata per il pag
 $_['error_conversion']  = 'Impossibile determinare l\'importo del pagamento al momento, riprova.';
 
 $_['button_pay'] = 'Paga ora';
+$_['text_fee'] = 'Commissione';
+$_['error_request'] = 'Non è stato possibile avviare il pagamento. Riprova.';
+$_['text_status_offline'] = 'Al momento non riusciamo a verificare lo stato del pagamento. Se hai già pagato, il pagamento verrà comunque registrato. Tieni aperta questa pagina o ricaricala tra poco.';
 
 $_['branding_logo'] = '<img src="' . HTTP_SERVER . 'image/catalog/cryptapi/payment_success.png" alt="cryptapi" style="width:122px;" />';
 $_['wallet_text'] = 'PORTAFOGLIO';

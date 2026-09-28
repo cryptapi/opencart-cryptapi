@@ -1,10 +1,12 @@
 {{ header }}
-<link rel="stylesheet" type="text/css" href="extension/cryptapi/catalog/view/javascript/css/cryptapi_style.css">
-<script type="text/javascript" src="extension/cryptapi/catalog/view/javascript/js/cryptapi_script.js"></script>
-<script>
-    let ajax_url = '{{ ajax_url }}';
-    check_status(ajax_url);
-</script>
+<link rel="stylesheet" type="text/css" href="{{ style_url|e('html_attr') }}">
+<script type="text/javascript" src="{{ script_url|e('html_attr') }}" defer></script>
+{# Same wrapper as core pages: OpenCart 4.1 positions the footer absolutely and
+   reserves room for it with padding on #content, so without it the footer covers
+   the bottom of the panel. #}
+<div id="payment-cryptapi" class="container">
+<div class="row">
+<div id="content" class="col">
 <div class="ca_payment-panel
 {% if color_scheme == 'auto' %}
  auto
@@ -12,8 +14,11 @@
  light
 {% else %}
  dark
-{% endif %}">
+{% endif %}" data-status-url="{{ ajax_url|e('html_attr') }}">
     <div class="ca_payment_details">
+        <div class="ca_payment_notification ca_status_offline" role="status" style="display: none;">
+            {{ text_status_offline }}
+        </div>
         <div class="ca_payments_wrapper">
             <div class="ca_qrcode_wrapper"
                  style="{% if qrcode_default == '0' %}display: none;{% endif %}; width: {{ qr_code_size + 20 }}px;">
@@ -41,7 +46,7 @@
                                     <button class="ca_qrcode_btn no_value
                         {% if qr_code_setting == 'without_ammount' or qr_code_setting == 'hide_ammount' %}
                          active
-                         {% endif %}" aria-label="{{ qrcode_alt_show_value }}">
+                         {% endif %}" aria-label="{{ qrcode_alt_show_text }}">
                                         {{ qrcode_button_noamount_text }}
                                     </button>
                                 {% endif %}
@@ -49,7 +54,7 @@
                                     <button class="ca_qrcode_btn value
                         {% if qr_code_setting == 'ammount' or qr_code_setting == 'hide_without_ammount' %}
                          active
-                         {% endif %}" aria-label="{{ qrcode_alt_show_value }}">
+                         {% endif %}" aria-label="{{ qrcode_alt_show_value_text }}">
                                         {{ qrcode_button_amount_text }}
                                     </button>
                                 {% endif %}
@@ -63,7 +68,7 @@
                                  alt="{{ qrcode_alt_text }}"/>
                         </figure>
                         <div class="ca_qrcode_buttons">
-                            <button class="ca_qrcode_btn no_value active" aria-label="{{ qrcode_alt_show_value }}">
+                            <button class="ca_qrcode_btn no_value active" aria-label="{{ qrcode_alt_show_text }}">
                                 {{ qrcode_button_noamount_text }}
                             </button>
                         </div>
@@ -108,7 +113,7 @@
                 </span>
             {% endif %}
             <div class="ca_buttons_container">
-                <a class="ca_show_qr" href="#" aria-label="{{ qrcode_show }}">
+                <a class="ca_show_qr" href="#" aria-label="{{ qrcode_show_text }}">
                                 <span class="ca_show_qr_open
                                 {% if qr_code_setting == 'hide_ammount' or qr_code_setting =='hide_without_ammount' %}
                                     active
@@ -188,5 +193,8 @@
             </div>
         </div>
     </div>
+</div>
+</div>
+</div>
 </div>
 {{ footer }}

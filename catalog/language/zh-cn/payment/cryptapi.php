@@ -2,7 +2,7 @@
 // NOTE: Simplified Chinese translation — auto-generated, recommend native-speaker review before public release.
 
 // Text
-$_['text_title'] = '加密货币' . ' <img src="' . HTTP_SERVER . 'image/catalog/cryptapi/payment.png" alt="cryptapi" style="height:23px" />';
+$_['text_title'] = '使用加密货币支付';
 $_['text_legend'] = '使用加密货币支付';
 $_['text_basket'] = '购物车';
 $_['text_checkout'] = '结账';
@@ -22,6 +22,9 @@ $_['error_adress']  = '此加密货币目前无法用于支付';
 $_['error_conversion']  = '目前无法确定支付金额,请重试。';
 
 $_['button_pay'] = '立即支付';
+$_['text_fee'] = '手续费';
+$_['error_request'] = '无法发起支付,请重试。';
+$_['text_status_offline'] = '目前无法查询您的支付状态。如果您已付款,您的付款仍会被正常记录。请保持此页面打开,或稍后刷新。';
 
 $_['branding_logo'] = '<img src="' . HTTP_SERVER . 'image/catalog/cryptapi/payment_success.png" alt="cryptapi" style="width:122px;" />';
 $_['wallet_text'] = '钱包';

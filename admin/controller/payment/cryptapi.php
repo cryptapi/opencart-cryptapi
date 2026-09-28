@@ -18,7 +18,18 @@ class CryptAPI extends \Opencart\System\Engine\Controller
 
         $this->load->model('extension/cryptapi/payment/cryptapi');
 
-        if (($this->request->server['REQUEST_METHOD'] == 'POST')) {
+        // Core's startup only enforces 'access'. Saving needs 'modify': these settings
+        // hold the receiving addresses, so a view-only admin must not change them.
+        $can_modify = $this->user->hasPermission('modify', 'extension/cryptapi/payment/cryptapi');
+
+        // Repair events on stores upgraded from an older release (install() doesn't re-run on upgrade).
+        if ($can_modify) {
+            $this->model_extension_cryptapi_payment_cryptapi->syncEvents();
+        }
+
+        if (($this->request->server['REQUEST_METHOD'] == 'POST') && !$can_modify) {
+            $this->error['warning'] = $this->language->get('error_permission');
+        } elseif (($this->request->server['REQUEST_METHOD'] == 'POST')) {
             $paid_statuses = [];
             if (isset($_POST['payment_cryptapi_paid_order_status_ids'])) {
                 foreach ($_POST['payment_cryptapi_paid_order_status_ids'] as $value) {
@@ -27,7 +38,16 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             }
             $this->request->post['payment_cryptapi_paid_order_status_ids'] = $paid_statuses;
 
+            // Core's 'admin_currency_setting' event runs the currency-rate engine after
+            // every editSetting(). On PHP 8.5, OpenCart <= 4.1.0.3's ECB engine prints a
+            // curl_close() deprecation there, and the redirect below then fails with
+            // "headers already sent". The settings are saved by then, so drop that output.
+            $ob_level = ob_get_level();
+            ob_start();
             $this->model_setting_setting->editSetting('payment_cryptapi', $this->request->post);
+            while (ob_get_level() > $ob_level) {
+                ob_end_clean();
+            }
 
             $this->session->data['success'] = $this->language->get('text_success');
 
@@ -94,6 +114,12 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             }
         }
 
+        // Pre-3.5.0 API key left in settings; the next save drops it (editSetting replaces the group).
+        $data['api_key_warning'] = '';
+        if (!empty($this->config->get('payment_cryptapi_api_key'))) {
+            $data['api_key_warning'] = $this->language->get('warning_api_key_removed');
+        }
+
         $data['breadcrumbs'] = array();
 
         $data['breadcrumbs'][] = array(
@@ -146,12 +172,6 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             $data['payment_cryptapi_title'] = $this->request->post['payment_cryptapi_title'];
         } else {
             $data['payment_cryptapi_title'] = $this->config->get('payment_cryptapi_title');
-        }
-
-        if (isset($this->request->post['payment_cryptapi_api_key'])) {
-            $data['payment_cryptapi_api_key'] = $this->request->post['payment_cryptapi_api_key'];
-        } else {
-            $data['payment_cryptapi_api_key'] = $this->config->get('payment_cryptapi_api_key');
         }
 
         // Cron secret read-back (POST handler already persists it via editSetting).
@@ -249,17 +269,19 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $this->response->setOutput($this->load->view('extension/cryptapi/payment/cryptapi', $data));
     }
 
-    public function order_info(&$route, &$data, &$output)
+    // Core's sale/order page calls <payment extension>|order / .order and shows
+    // the returned HTML as a tab on every OC 4 version; no event needed.
+    public function order(): string
     {
         $order_id = (int)($this->request->get['order_id'] ?? 0);
         $this->load->model('extension/cryptapi/payment/cryptapi');
         $order = $this->model_extension_cryptapi_payment_cryptapi->getOrder($order_id);
-        if (!$order) { return; }
+        if (!$order) { return ''; }
 
         $metaData = $order['response'];
-        if (empty($metaData)) { return; }
+        if (empty($metaData)) { return ''; }
         $metaData = json_decode($metaData, true);
-        if (!is_array($metaData)) { return; }
+        if (!is_array($metaData)) { return ''; }
 
         // Escape every dynamic segment before concatenating into admin HTML.
         $esc = static function ($v): string {
@@ -302,9 +324,36 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             }
         }
 
-        if (isset($data['tabs'][0]['code']) && $data['tabs'][0]['code'] === 'cryptapi') {
-            $data['tabs'][0]['content'] = '<table style="font-size: 13px;" class="table table-bordered">' . $fields . '</table>';
+        return '<table style="font-size: 13px;" class="table table-bordered">' . $fields . '</table>';
+    }
+
+    // OC 4.0.0.0 only (registered by the model's syncEvents()): core builds the
+    // payment tab route as 'extension/payment/cryptapi|order', which doesn't
+    // exist, so add the tab here instead.
+    public function order_tab(&$route, &$data, &$output)
+    {
+        if (($data['payment_code'] ?? '') !== 'cryptapi') {
+            return;
         }
+
+        foreach ((array)($data['tabs'] ?? []) as $tab) {
+            if (($tab['code'] ?? '') === 'cryptapi') {
+                return;
+            }
+        }
+
+        $content = $this->order();
+        if ($content === '') {
+            return;
+        }
+
+        $this->load->language('extension/cryptapi/payment/cryptapi', 'cryptapi');
+
+        $data['tabs'][] = [
+            'code'    => 'cryptapi',
+            'title'   => $this->language->get('cryptapi_heading_title'),
+            'content' => $content,
+        ];
     }
 
     public function install(): void

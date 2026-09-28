@@ -6,7 +6,8 @@ Accept cryptocurrency payments on your OpenCart store
 ### Requirements:
 
 ```
-OpenCart >= 4.0
+OpenCart 4.0.0.0 - 4.1.0.4
+PHP >= 8.0
 ```
 
 ### Description
@@ -148,7 +149,6 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 * UI Improvements
 
 #### 3.1
-* Support CryptAPI Pro
 * Minor fixes
 
 #### 3.1.1
@@ -156,7 +156,6 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 
 #### 3.2
 * Support for OpenCart 4.0
-* Support for BlockBee
 * New e-mail once a order is done with a link for payment
 * New settings layout
 * Minor fixes
@@ -193,5 +192,8 @@ The easiest and fastest way is via our live chat on our [website](https://crypta
 #### 3.4.0
 * Bugfixes and security improvements
 
+#### 3.5.0
+* Bugfixes
+
 ### Upgrade Notice
-* No breaking changes
+* After upgrading, open the CryptAPI settings page once. This repairs the extension's events.
