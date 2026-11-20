@@ -100,3 +100,10 @@ $_['info_icon'] = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16
 
 $_['entry_cron_secret'] = 'Cron secret';
 $_['help_cron_secret']  = 'Required to call the public cron URL over HTTP from a non-loopback host. Append &secret=<this value> to the cron URL. Leave empty to allow only CLI or direct-loopback (no-proxy) cron. If your store is behind a reverse proxy, you MUST set this — loopback is not trusted when proxy headers are present.';
+
+// Domain verification notice
+$_['text_domain_notice_title'] = 'Verify your domain so customers can pay';
+$_['text_domain_notice'] = 'CryptAPI only creates payment addresses for verified domains. Until you verify %s, customers can\'t pay with CryptAPI. You only need to do this once, with a DNS TXT record or an HTTPS file. Payment addresses you already created keep working.';
+$_['button_verify_domain'] = 'Verify your domain';
+$_['button_domain_guide'] = 'Step-by-step guide';
+$_['button_hide_domain_notice'] = 'I\'ve verified my domain, hide this notice';

@@ -38,6 +38,9 @@ class CryptAPI extends \Opencart\System\Engine\Controller
             }
             $this->request->post['payment_cryptapi_paid_order_status_ids'] = $paid_statuses;
 
+            // Only the domain notice's hide button posts this; other saves keep the stored value.
+            $this->request->post['payment_cryptapi_domain_verified'] = (!empty($this->request->post['payment_cryptapi_domain_verified']) || $this->config->get('payment_cryptapi_domain_verified')) ? 1 : 0;
+
             // Core's 'admin_currency_setting' event runs the currency-rate engine after
             // every editSetting(). On PHP 8.5, OpenCart <= 4.1.0.3's ECB engine prints a
             // curl_close() deprecation there, and the redirect below then fails with
@@ -118,6 +121,22 @@ class CryptAPI extends \Opencart\System\Engine\Controller
         $data['api_key_warning'] = '';
         if (!empty($this->config->get('payment_cryptapi_api_key'))) {
             $data['api_key_warning'] = $this->language->get('warning_api_key_removed');
+        }
+
+        // CryptAPI only creates payment addresses for callbacks on a verified domain.
+        // Callbacks go to the URL of the store that took the order, so name every
+        // store's host. The notice stays until the admin clicks its hide button.
+        $data['domain_notice'] = '';
+        if (!$this->config->get('payment_cryptapi_domain_verified')) {
+            $this->load->model('setting/store');
+            $domains = [];
+            foreach (array_merge([HTTP_CATALOG], array_column($this->model_setting_store->getStores(), 'url')) as $url) {
+                $host = (string)parse_url($url, PHP_URL_HOST);
+                if ($host !== '') {
+                    $domains[$host] = '<code>' . htmlspecialchars($host, ENT_QUOTES, 'UTF-8') . '</code>';
+                }
+            }
+            $data['domain_notice'] = sprintf($this->language->get('text_domain_notice'), implode(', ', $domains));
         }
 
         $data['breadcrumbs'] = array();

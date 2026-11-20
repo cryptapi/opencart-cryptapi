@@ -20,6 +20,15 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         {% endif %}
+        {% if domain_notice %}
+            <div class="alert alert-warning">
+                <p><i class="fas fa-exclamation-triangle"></i> <strong>{{ text_domain_notice_title }}</strong></p>
+                <p>{{ domain_notice }}</p>
+                <a href="https://cryptapi.io/verify_domain/" target="_blank" rel="noopener" class="btn btn-primary btn-sm">{{ button_verify_domain }}</a>
+                <a href="https://docs.cryptapi.io/kb/developers/how-to-verify-your-callback-domain" target="_blank" rel="noopener" class="btn btn-light btn-sm">{{ button_domain_guide }}</a>
+                <button type="submit" form="form-payment" name="payment_cryptapi_domain_verified" value="1" class="btn btn-light btn-sm">{{ button_hide_domain_notice }}</button>
+            </div>
+        {% endif %}
         {% if currency_warning %}
             <div class="alert alert-warning alert-dismissible"><i class="fas fa-exclamation-triangle"></i> {{ currency_warning }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
