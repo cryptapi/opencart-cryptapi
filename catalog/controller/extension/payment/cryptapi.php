@@ -16,8 +16,6 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
         $order = $this->model_checkout_order->getOrder($this->session->data['order_id']);
 
-        $order_total = floatval($order['total']);
-
         foreach ($this->config->get('payment_cryptapi_cryptocurrencies') as $selected) {
             foreach (json_decode(str_replace("&quot;", '"', $this->config->get('payment_cryptapi_cryptocurrencies_array_cache')), true) as $token => $coin) {
                 if ($selected === $token) {
@@ -35,34 +33,64 @@ class ControllerExtensionPaymentCryptapi extends Controller
         // Fee
         $fee = $this->config->get('payment_cryptapi_fees');
         $blockchain_fee = $this->config->get('payment_cryptapi_blockchain_fees');
-        $currency = $order['currency_code'];
         $currencySymbolLeft = $this->model_localisation_currency->getCurrencies()[$order['currency_code']]['symbol_left'];
         $currencySymbolRight = $this->model_localisation_currency->getCurrencies()[$order['currency_code']]['symbol_right'];
         $data['symbol_left'] = $currencySymbolLeft;
         $data['symbol_right'] = $currencySymbolRight;
 
-        $cryptapiFee = 0;
-
-        if ($_POST) {
-            if ($fee != 0) {
-                $cryptapiFee += floatval($fee) * $order_total;
-            }
-
-            if ($blockchain_fee) {
-                $cryptapiFee += floatval(CryptAPIHelper::get_estimate($_POST["cryptapi_coin"])->$currency);
-            }
-        }
+        // The checkout reloads this with the chosen coin to show its fee.
+        $coin = isset($this->request->post['cryptapi_coin']) ? (string)$this->request->post['cryptapi_coin'] : '';
+        $amounts = $this->orderAmounts($order, isset($data['cryptocurrencies'][$coin]) ? $coin : '');
 
         $data['fee'] = $fee;
         $data['blockchain_fee'] = $blockchain_fee;
-        $data['cryptapi_fee'] = $this->currency->format($cryptapiFee, $currency, 1.00000, false);
-        $data['total'] = $this->currency->format($order_total + $cryptapiFee, $currency, 1.00000, false);
-
-        $this->session->data['cryptapi_fee'] = round($cryptapiFee, 2);
+        $data['cryptapi_fee'] = $amounts['fee'];
+        $data['total'] = $amounts['total'];
 
         $this->load->model('checkout/order');
 
         return $this->load->view('extension/payment/cryptapi', $data);
+    }
+
+    /*
+     * What the customer sees and pays, in the order's currency. OpenCart stores
+     * order totals in the store's default currency, so convert with the order's
+     * own rate: formatting the raw total with a rate of 1 quoted a 100 USD order
+     * as 100 JPY. Worked out here for both the checkout and confirm(), never
+     * taken from the session.
+     */
+    private function orderAmounts($order, $coin)
+    {
+        $currency = $order['currency_code'];
+        $order_total = (float)$this->currency->format((float)$order['total'], $currency, (float)$order['currency_value'], false);
+
+        $fee = 0.0;
+
+        if ($coin !== '') {
+            $fee_rate = (float)$this->config->get('payment_cryptapi_fees');
+
+            if ($fee_rate > 0) {
+                $fee += $fee_rate * $order_total;
+            }
+
+            if ($this->config->get('payment_cryptapi_blockchain_fees')) {
+                $estimate = CryptAPIHelper::get_estimate($coin);
+
+                if (is_object($estimate) && isset($estimate->$currency)) {
+                    $fee += (float)$estimate->$currency;
+                } elseif (is_object($estimate) && isset($estimate->USD)) {
+                    $fee += $this->currency->convert((float)$estimate->USD, 'USD', $currency);
+                }
+            }
+        }
+
+        // Already in the order's currency: a rate of 1 only rounds to its decimals.
+        $fee = (float)$this->currency->format($fee, $currency, 1.00000, false);
+
+        return [
+            'fee' => $fee,
+            'total' => (float)$this->currency->format($order_total + $fee, $currency, 1.00000, false),
+        ];
     }
 
     public function confirm()
@@ -72,21 +100,26 @@ class ControllerExtensionPaymentCryptapi extends Controller
         $err_coin = '';
 
         if ($this->session->data['payment_method']['code'] == 'cryptapi') {
+            require_once(DIR_SYSTEM . 'library/cryptapi.php');
+
             $this->load->model('checkout/order');
             $this->load->model('extension/payment/cryptapi');
 
             $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-            $cryptoFee = empty($this->session->data['cryptapi_fee']) ? 0 : $this->session->data['cryptapi_fee'];
-            $total = $this->currency->format($order_info['total'] + $cryptoFee, $order_info['currency_code'], 1.00000, false);
-            $currency = $this->session->data['currency'];
 
             $apiKey = $this->config->get('payment_cryptapi_api_key');
             if (empty($this->request->post['cryptapi_coin'])) {
                 $err_coin = $this->language->get('error_coin');
             } else {
-                $selected = $this->request->post['cryptapi_coin'];
+                $selected = (string)$this->request->post['cryptapi_coin'];
+
+                // Only a coin the store has turned on.
+                if (!in_array($selected, (array)$this->config->get('payment_cryptapi_cryptocurrencies'), true)) {
+                    $err_coin = $this->language->get('error_coin');
+                }
+
                 $address = $this->config->get('payment_cryptapi_cryptocurrencies_address_' . $selected);
-                if (empty($address) && empty($apiKey)) {
+                if (empty($err_coin) && empty($address) && empty($apiKey)) {
                     $err_coin = $this->language->get('error_apikey');
                 }
             }
@@ -94,27 +127,34 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
 
             if (empty($err_coin) && (!empty($address) || !empty($apiKey))) {
-                $nonce = $this->model_extension_payment_cryptapi->generateNonce();
-
-                require_once(DIR_SYSTEM . 'library/cryptapi.php');
+                // The callback secret. It goes only into the callback URL that
+                // CryptAPI calls, never into a URL the customer sees.
+                $nonce = CryptAPIHelper::random_token();
 
                 $disable_conversion = $this->config->get('payment_cryptapi_disable_conversion');
                 $qr_code_size = $this->config->get('payment_cryptapi_qrcode_size');
 
+                $amounts = $this->orderAmounts($order_info, $selected);
+                $cryptoFee = $amounts['fee'];
+                $total = $amounts['total'];
+
                 $info = CryptAPIHelper::get_info($selected);
-                $minTx = floatval($info->minimum_transaction_coin);
+                $minTx = isset($info->minimum_transaction_coin) ? floatval($info->minimum_transaction_coin) : 0;
 
                 $cryptoTotal = CryptAPIHelper::get_conversion($order_info['currency_code'], $selected, $total, $disable_conversion);
                 $callbackUrl = $this->url->link('extension/payment/cryptapi/callback', 'order_id=' . $this->session->data['order_id'] . '&nonce=' . $nonce, true);
                 $callbackUrl = str_replace('&amp;', '&', $callbackUrl);
 
-                $helper = new CryptAPIHelper($selected, $address, $apiKey, $callbackUrl, [], true);
-                $addressIn = $helper->get_address();
-
-                if (!isset($addressIn)) {
-                    $err_coin = $this->language->get('error_adress');
+                // A failed rate lookup returns null. Never make an order without a price.
+                if (!CryptAPIHelper::is_positive_number($cryptoTotal)) {
+                    $err_coin = $this->language->get('error_conversion');
                 } else {
-                    if (($cryptoTotal < $minTx)) {
+                    $helper = new CryptAPIHelper($selected, $address, $apiKey, $callbackUrl, [], true);
+                    $addressIn = $helper->get_address();
+
+                    if (!isset($addressIn)) {
+                        $err_coin = $this->language->get('error_adress');
+                    } elseif ($cryptoTotal < $minTx) {
                         $err_coin = $this->language->get('value_minim') . ' ' . $minTx . ' ' . strtoupper($selected);
                     }
                 }
@@ -123,7 +163,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
                     $qrCodeDataValue = $helper->get_qrcode($cryptoTotal, $qr_code_size);
                     $qrCodeData = $helper->get_qrcode('', $qr_code_size);
-                    $paymentURL = $this->url->link('extension/payment/cryptapi/pay', 'order_id=' . $this->session->data['order_id'] . 'nonce=' . $nonce, true);
+                    $paymentURL = $this->url->link('extension/payment/cryptapi/pay', 'order_id=' . $this->session->data['order_id'], true);
 
                     $paymentData = [
                         'cryptapi_fee' => $cryptoFee,
@@ -132,21 +172,23 @@ class ControllerExtensionPaymentCryptapi extends Controller
                         'cryptapi_total' => $cryptoTotal,
                         'cryptapi_total_fiat' => $total,
                         'cryptapi_currency' => $selected,
-                        'cryptapi_qrcode_value' => $qrCodeDataValue['qr_code'],
-                        'cryptapi_qrcode' => $qrCodeData['qr_code'],
+                        'cryptapi_qrcode_value' => is_array($qrCodeDataValue) ? $qrCodeDataValue['qr_code'] : '',
+                        'cryptapi_qrcode' => is_array($qrCodeData) ? $qrCodeData['qr_code'] : '',
                         'cryptapi_last_price_update' => time(),
                         'cryptapi_order_timestamp' => time(),
                         'cryptapi_cancelled' => '0',
                         'cryptapi_min' => $minTx,
                         'cryptapi_history' => json_encode([]),
-                        'cryptapi_payment_url' => $paymentURL
+                        'cryptapi_payment_url' => $paymentURL,
+                        // The callback's signature is checked against this URL's origin.
+                        'cryptapi_callback_url' => $callbackUrl,
                     ];
 
                     $paymentData = json_encode($paymentData);
                     $this->model_extension_payment_cryptapi->addPaymentData($this->session->data['order_id'], $paymentData);
 
                     $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('payment_cryptapi_order_status_id'));
-                    $json['redirect'] = $this->url->link('checkout/success', 'order_id=' . $this->session->data['order_id'] . 'nonce=' . $nonce, true);
+                    $json['redirect'] = $this->url->link('checkout/success', 'order_id=' . $this->session->data['order_id'], true);
                 } else {
                     $json['error']['warning'] = sprintf($this->language->get('error_payment'), $err_coin);
                 }
@@ -297,8 +339,6 @@ class ControllerExtensionPaymentCryptapi extends Controller
 
         $this->load->language('extension/payment/cryptapi');
 
-        $nonce = $metaData['cryptapi_nonce'];
-
         /**
          * Tries sending an e-mail. Will fail if configuration is not set but won't throw an error.
          */
@@ -331,7 +371,7 @@ class ControllerExtensionPaymentCryptapi extends Controller
             # don't do anything
         }
 
-        return $this->response->redirect($this->url->link('extension/payment/cryptapi/pay', 'order_id=' . $order['order_id'] . 'nonce=' . $nonce, true));
+        return $this->response->redirect($this->url->link('extension/payment/cryptapi/pay', 'order_id=' . $order['order_id'], true));
     }
 
     public function isOrderPaid($order)
@@ -465,21 +505,28 @@ class ControllerExtensionPaymentCryptapi extends Controller
                     if ($remaining === $remaining_pending) {
                         $cryptapi_coin = $metaData['cryptapi_currency'];
 
-                        $crypto_total = CryptAPIHelper::get_conversion($currency, $cryptapi_coin, $metaData['cryptapi_total_fiat'], $this->disable_conversion);
+                        // $this->disable_conversion never existed, so the setting was ignored here.
+                        $crypto_total = CryptAPIHelper::get_conversion($currency, $cryptapi_coin, $metaData['cryptapi_total_fiat'], $this->config->get('payment_cryptapi_disable_conversion'));
 
-                        $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_total', $crypto_total);
+                        // A failed call returns null. Never save that as the total
+                        // (any payment then completed the order); keep the old one.
+                        if (CryptAPIHelper::is_positive_number($crypto_total)) {
+                            $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_total', $crypto_total);
 
-                        $calc_cron = CryptAPIHelper::calc_order($history, $crypto_total, $metaData['cryptapi_total_fiat']);
+                            $calc_cron = CryptAPIHelper::calc_order($history, $crypto_total, $metaData['cryptapi_total_fiat']);
 
-                        $crypto_remaining_total = $calc_cron['remaining_pending'];
+                            $crypto_remaining_total = $calc_cron['remaining_pending'];
 
-                        if ($remaining_pending <= $min_tx && $remaining_pending > 0) {
-                            $qr_code_data_value = CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $min_tx, $qrcode_size);
-                        } else {
-                            $qr_code_data_value = CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $crypto_remaining_total, $qrcode_size);
+                            if ($remaining_pending <= $min_tx && $remaining_pending > 0) {
+                                $qr_code_data_value = CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $min_tx, $qrcode_size);
+                            } else {
+                                $qr_code_data_value = CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $cryptapi_coin, $crypto_remaining_total, $qrcode_size);
+                            }
+
+                            if (is_array($qr_code_data_value)) {
+                                $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_qrcode_value', $qr_code_data_value['qr_code']);
+                            }
                         }
-
-                        $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_qrcode_value', $qr_code_data_value['qr_code']);
                     }
 
                     $this->model_extension_payment_cryptapi->updatePaymentData($order_id, 'cryptapi_last_price_update', time());
@@ -501,19 +548,88 @@ class ControllerExtensionPaymentCryptapi extends Controller
         $this->load->model('extension/payment/cryptapi');
 
         $data = CryptAPIHelper::process_callback($_GET);
+        $data['order_id'] = isset($data['order_id']) ? $data['order_id'] : 0;
+        $data['nonce'] = isset($data['nonce']) ? $data['nonce'] : '';
 
         $this->load->model('checkout/order');
 
         $order = $this->model_checkout_order->getOrder((int)$data['order_id']);
 
-        $metaData = json_decode($this->model_extension_payment_cryptapi->getPaymentData($order['order_id']), true);
+        $metaData = $order ? json_decode((string)$this->model_extension_payment_cryptapi->getPaymentData($order['order_id']), true) : null;
+
+        if (!is_array($metaData)) {
+            http_response_code(403);
+            die('unknown order');
+        }
+
+        // Earlier versions trusted any request that knew the nonce, and showed the
+        // nonce to the customer in the payment page's URL. Now every callback must
+        // carry CryptAPI's RSA signature over the URL it called, checked against a
+        // store-made origin. Orders from before this version have no stored
+        // callback URL, so try the store's own base URLs.
+        $pubkey = $this->cache->get('cryptapi.pubkey');
+
+        if (empty($pubkey)) {
+            $pubkey = CryptAPIHelper::fetch_pubkey();
+
+            if (!empty($pubkey)) {
+                $this->cache->set('cryptapi.pubkey', $pubkey);
+            }
+        }
+
+        $signature = isset($_SERVER['HTTP_X_CA_SIGNATURE']) ? (string)$_SERVER['HTTP_X_CA_SIGNATURE'] : '';
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '';
+
+        $bases = !empty($metaData['cryptapi_callback_url'])
+            ? [$metaData['cryptapi_callback_url']]
+            : array_filter([defined('HTTPS_SERVER') ? HTTPS_SERVER : '', defined('HTTP_SERVER') ? HTTP_SERVER : '']);
+
+        $verified = false;
+
+        foreach ($bases as $base) {
+            if (!empty($pubkey) && CryptAPIHelper::verify_signature(CryptAPIHelper::build_signed_url($base, $request_uri), $signature, $pubkey)) {
+                $verified = true;
+                break;
+            }
+        }
+
+        if (!$verified) {
+            http_response_code(403);
+            die('invalid signature');
+        }
+
+        if (!CryptAPIHelper::safe_equals(isset($metaData['cryptapi_nonce']) ? $metaData['cryptapi_nonce'] : '', $data['nonce'])) {
+            http_response_code(403);
+            die('invalid nonce');
+        }
+
+        // Anyone can ask CryptAPI for an address that calls this URL, so a signed
+        // callback only counts for the address made for this order.
+        $stored_address = strtolower(trim(isset($metaData['cryptapi_address']) ? (string)$metaData['cryptapi_address'] : ''));
+
+        if ($stored_address === '' || !CryptAPIHelper::safe_equals($stored_address, strtolower(trim((string)$data['address_in'])))) {
+            http_response_code(403);
+            die('address mismatch');
+        }
 
         if ($data["coin"] !== $metaData['cryptapi_currency']) {
             die("*ok*");
         }
 
-        if ($this->isOrderPaid($order) || $data['nonce'] !== $metaData['cryptapi_nonce']) {
+        if ($this->isOrderPaid($order)) {
             die("*ok*");
+        }
+
+        if ((string)$data['uuid'] === '') {
+            http_response_code(403);
+            die('missing uuid');
+        }
+
+        // Never work out payment state from an invalid total. CryptAPI sends the
+        // callback again, and the next price refresh repairs the total.
+        if (!CryptAPIHelper::is_positive_number($metaData['cryptapi_total'])) {
+            http_response_code(503);
+            die('total not set');
         }
 
         $disable_conversion = $this->config->get('payment_cryptapi_disable_conversion');
@@ -559,13 +675,11 @@ class ControllerExtensionPaymentCryptapi extends Controller
             die('*ok*');
         }
 
-        if ($remaining_pending <= $min_tx) {
-            $qrcode_conv = CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $metaData['cryptapi_currency'], $min_tx, $qrcode_size)['qr_code'];
-        } else {
-            $qrcode_conv = CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $metaData['cryptapi_currency'], $remaining_pending, $qrcode_size)['qr_code'];
-        }
+        $qrcode_conv = CryptAPIHelper::get_static_qrcode($metaData['cryptapi_address'], $metaData['cryptapi_currency'], $remaining_pending <= $min_tx ? $min_tx : $remaining_pending, $qrcode_size);
 
-        $this->model_extension_payment_cryptapi->updatePaymentData($order['order_id'], 'cryptapi_qrcode_value', $qrcode_conv);
+        if (is_array($qrcode_conv)) {
+            $this->model_extension_payment_cryptapi->updatePaymentData($order['order_id'], 'cryptapi_qrcode_value', $qrcode_conv['qr_code']);
+        }
 
         die("*ok*");
     }

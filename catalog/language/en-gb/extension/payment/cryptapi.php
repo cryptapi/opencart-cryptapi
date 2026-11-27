@@ -19,6 +19,7 @@ $_['value_minim']  = 'Value too low, minimum is';
 $_['error_coin']  = 'No cryptocurrency selected for payment';
 $_['error_apikey']  = 'Insufficient store owner details for payment';
 $_['error_adress']  = 'This cryptocurrency cannot be used for payment at this time';
+$_['error_conversion']  = 'The exchange rate could not be loaded. Please try again in a moment';
 
 $_['button_pay'] = 'Pay now';
 
