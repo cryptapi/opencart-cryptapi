@@ -65,6 +65,8 @@
                 success: function (json) {
                     if (json['redirect']) {
                         location = json['redirect'];
+                    } else if (json['error']) {
+                        alert(json['error']);
                     }
                 },
                 error: function (xhr, ajaxOptions, thrownError) {
